@@ -1,0 +1,179 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<!-- [Head] start -->
+<head>
+  <title>Login</title>
+
+  <!-- Meta -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'assets/images/favicon.svg' %}" type="image/x-icon">
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="{% static 'assets/fonts/inter/inter.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/tabler-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/feather.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/fontawesome.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/material.css' %}">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
+</head>
+<!-- [Head] end -->
+
+<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">
+
+  <!-- Pre Loader -->
+  <div class="loader-bg">
+    <div class="loader-track">
+      <div class="loader-fill"></div>
+    </div>
+  </div>
+
+  <!-- Auth Page -->
+  <div class="auth-main">
+    <div class="auth-wrapper v1">
+      <div class="auth-form">
+        <div class="card my-5">
+          <div class="card-body">
+
+            <div class="mt-4">
+                <form id="loginForm">
+                {% csrf_token %}
+
+                <div class="form-group mb-3">
+                    <input type="email" name="email" class="form-control" placeholder="Email Address">
+                </div>
+
+                <div class="form-group mb-3">
+                    <input type="password" name="password" class="form-control" placeholder="Password">
+                </div>
+
+                <div class="d-flex mt-1 justify-content-between align-items-center">
+                    <div class="form-check">
+                    <input class="form-check-input input-primary" type="checkbox" id="remember">
+                    <label class="form-check-label text-muted" for="remember">Remember me?</label>
+                    </div>
+                    <a href="#" class="text-secondary f-w-400">Forgot Password?</a>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+                </form>
+            </div>
+            <div class="d-flex justify-content-between align-items-end mt-4">
+              <h6 class="f-w-500 mb-0">Don't have an Account?</h6>
+              <a href="#" class="link-primary">Create Account</a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="{% static 'assets/js/plugins/popper.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/bootstrap.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/simplebar.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/feather.min.js' %}"></script>
+  <script src="{% static 'assets/js/fonts/custom-font.js' %}"></script>
+  <script src="{% static 'assets/js/pcoded.js' %}"></script>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+
+</body>
+</html>
+<script>
+$(document).ready(function () {
+
+    $("#loginForm").on("submit", function (e) {
+        e.preventDefault(); // stop form submit
+
+        const email = $("input[name='email']").val();
+        const password = $("input[name='password']").val();
+
+        if (!email || !password) {
+            alert("Email and password are required");
+            return;
+        }
+
+        $.ajax({
+            url: "/account/auth/login/",
+            type: "POST",
+            contentType: "application/json",
+            headers: {
+                "X-CSRFToken": getCSRFToken()
+            },
+            data: JSON.stringify({
+                email: email,
+                password: password
+            }),
+            success: function (response) {
+                 setCookie("access_token", response.access_token, 1);
+                 setCookie("user_role", response.user.role, 1);
+                localStorage.setItem("access_token", response.access_token);
+                localStorage.setItem("user_role", response.user.role);
+                if (response.user.role === "ADMIN") {
+                    window.location.href = "{% url 'dashboard' %}";
+                } else {
+                    window.location.href = "{% url 'dashboard' %}";
+                }
+            },
+            error: function (xhr) {
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    alert(xhr.responseJSON.message);
+                } else {
+                    alert("Login failed");
+                }
+            }
+        });
+    });
+
+});
+
+// CSRF helper
+function getCSRFToken() {
+    let cookieValue = null;
+    let cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.startsWith('csrftoken=')) {
+            cookieValue = cookie.substring('csrftoken='.length);
+            break;
+        }
+    }
+    return cookieValue;
+}
+
+function setCookie(name, value, hours) {
+    let expires = "";
+    if (hours) {
+        const date = new Date();
+        date.setTime(date.getTime() + (hours * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i].trim();
+        if (c.indexOf(nameEQ) === 0) {
+            return decodeURIComponent(c.substring(nameEQ.length));
+        }
+    }
+    return null;
+}
+
+</script>
