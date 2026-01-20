@@ -1,9 +1,9 @@
 # Django & REST Framework
-Django==3.2.25
-djangorestframework==3.12.4
+Django==4.2.11
+djangorestframework==3.14.0
 
 # Database Drivers
-mysqlclient==2.2.7
+mysqlclient==2.2.4
 mariadb==1.1.14
 mssql-django==1.6
 pyodbc==5.3.0
@@ -18,12 +18,13 @@ tzdata==2025.3
 PyJWT==2.10.1
 
 # Image Processing
-pillow==12.1.0
+pillow==10.4.0
 
 # Type Hints
 typing_extensions==4.15.0
 
 # Package Management
 packaging==25.0
-pip==23.0.1
-setuptools==65.5.0
+pip==25.3
+setuptools==80.9.0
+wheel==0.45.1
