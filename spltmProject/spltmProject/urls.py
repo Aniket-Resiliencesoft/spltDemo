@@ -22,5 +22,6 @@ urlpatterns = [
     path('', login_view),  
     path('dashboard/',adminDashBoard,name='dashboard'),
     path('account/',include('accounts.urls')),
+    path('api/',include('events.urls')),
     path('admin/', admin.site.urls),
 ]
