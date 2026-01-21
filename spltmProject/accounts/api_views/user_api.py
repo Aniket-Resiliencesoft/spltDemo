@@ -14,7 +14,7 @@ from accounts.serializer import (
 from common.api.base_api import BaseAuthenticatedAPI
 from accounts.serializer import UserRoleCreateSerializer
 
-class UserListAPI(APIView):
+class UserListAPI(BaseAuthenticatedAPI):
     """
     GET:
     Returns list of all active users.

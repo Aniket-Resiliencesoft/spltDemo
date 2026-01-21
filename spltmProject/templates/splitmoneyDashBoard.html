@@ -1,0 +1,303 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Money Admin | Admin Dashboard</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --sidebar-bg: linear-gradient(180deg, #0f172a, #111827);
+      --card-radius: 18px;
+    }
+
+    body {
+      background: #f6f7fb;
+      font-family: "Poppins", "Inter", "Segoe UI", sans-serif;
+      color: #111827;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      min-height: 100vh;
+      position: fixed;
+      background: var(--sidebar-bg);
+      color: #e5e7eb;
+      padding: 22px 0;
+      box-shadow: 8px 0 24px rgba(0,0,0,0.06);
+    }
+
+    .sidebar .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 24px 28px 24px;
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .sidebar .brand .logo-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      display: grid;
+      place-items: center;
+      color: #0f172a;
+      font-weight: 800;
+    }
+
+    .sidebar a {
+      color: #cbd5f5;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      transition: 0.2s ease;
+      font-weight: 500;
+    }
+
+    .sidebar a i {
+      font-size: 18px;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-left: 4px solid #4f46e5;
+      padding-left: 20px;
+    }
+
+    /* Content */
+    .content {
+      margin-left: 260px;
+      padding: 30px;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      margin-bottom: 26px;
+    }
+
+    .search-box {
+      max-width: 240px;
+    }
+
+    /* Cards */
+    .stat-card {
+      border: none;
+      border-radius: var(--card-radius);
+      padding: 22px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    }
+
+    .stat-card i {
+      position: absolute;
+      right: 18px;
+      bottom: 12px;
+      font-size: 60px;
+      opacity: 0.16;
+    }
+
+    .bg-blue { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    .bg-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .bg-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .bg-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+    /* Cards general */
+    .card {
+      border-radius: var(--card-radius);
+      border: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    /* Table */
+    .table thead {
+      background: #eef2ff;
+    }
+
+    .chart-card {
+      height: 320px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-circle"><i class="bi bi-cash-stack"></i></div>
+      <span>Money Admin</span>
+    </div>
+    <a href="{% url 'dashboard' %}" class="active"><i class="bi bi-speedometer2"></i>Dashboard</a>
+    <a href="/account/users/"><i class="bi bi-people"></i>Users</a>
+    <a href="/api/events/"><i class="bi bi-calendar-event"></i>Events</a>
+    <a href="/api/transactions/"><i class="bi bi-wallet2"></i>Payments</a>
+    <a href="#"><i class="bi bi-bank"></i>Vendor Payouts</a>
+    <a href="#"><i class="bi bi-graph-up"></i>Reports</a>
+    <a href="#"><i class="bi bi-gear"></i>Settings</a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+    <!-- Topbar -->
+    <div class="topbar d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold mb-0">Admin Dashboard</h5>
+      <div class="d-flex align-items-center gap-3">
+        <div class="search-box">
+          <input type="text" class="form-control form-control-sm" placeholder="Search...">
+        </div>
+        <i class="bi bi-bell fs-5"></i>
+        <i class="bi bi-person-circle fs-4"></i>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <div class="stat-card bg-blue">
+          <h6>Total Users</h6>
+          <h2>{{ total_users|default:0 }}</h2>
+          <i class="bi bi-people"></i>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card bg-green">
+          <h6>Total Events</h6>
+          <h2>{{ total_events|default:0 }}</h2>
+          <i class="bi bi-calendar-check"></i>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card bg-orange">
+          <h6>Collected Amount</h6>
+          <h2>&#8377;{{ collected_amount|default:0|floatformat:"2" }}</h2>
+          <i class="bi bi-cash-stack"></i>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card bg-red">
+          <h6>Pending Payouts</h6>
+          <h2>&#8377;{{ pending_payouts|default:0|floatformat:"2" }}</h2>
+          <i class="bi bi-exclamation-circle"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-8">
+        <div class="card shadow-sm p-4 chart-card">
+          <h6 class="fw-semibold mb-3">Monthly Collection</h6>
+          <canvas id="revenueChart"></canvas>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm p-4 chart-card">
+          <h6 class="fw-semibold mb-3">Event Status</h6>
+          <canvas id="eventChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-white fw-semibold">
+        Recent Events
+      </div>
+      <div class="card-body">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Organizer</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent_events %}
+              {% for ev in recent_events %}
+                <tr>
+                  <td>{{ ev.title }}</td>
+                  <td>{{ ev.organizer }}</td>
+                  <td>
+                    <span class="badge
+                      {% if ev.status_raw == 'completed' %}bg-success
+                      {% elif ev.status_raw == 'active' %}bg-primary
+                      {% elif ev.status_raw == 'closed' %}bg-secondary
+                      {% elif ev.status_raw == 'cancelled' %}bg-danger
+                      {% else %}bg-warning text-dark{% endif %}
+                    ">{{ ev.status }}</span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="3" class="text-center text-muted">No recent events</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- JS -->
+  <script>
+    const revenueLabels = {{ monthly_labels|default:'[]'|safe }};
+    const revenueData = {{ monthly_amounts|default:'[]'|safe }};
+    const statusLabels = {{ event_status_labels|default:'[]'|safe }};
+    const statusCounts = {{ event_status_counts|default:'[]'|safe }};
+
+    new Chart(document.getElementById('revenueChart'), {
+      type: 'line',
+      data: {
+        labels: revenueLabels,
+        datasets: [{
+          label: 'Amount (\u20b9)',
+          data: revenueData,
+          tension: 0.45,
+          fill: true,
+          backgroundColor: 'rgba(99, 102, 241, 0.12)',
+          borderColor: '#4f46e5',
+          pointBackgroundColor: '#4f46e5'
+        }]
+      },
+      options: {
+        plugins: { legend: { display: true, position: 'top' } },
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+  
+    new Chart(document.getElementById('eventChart'), {
+      type: 'doughnut',
+      data: {
+        labels: statusLabels,
+        datasets: [{
+          data: statusCounts,
+          backgroundColor: ['#2563eb', '#ec4899', '#f59e0b', '#16a34a', '#dc2626']
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'top' } },
+        cutout: '55%'
+      }
+    });
+  </script>
+</body>
+</html>
