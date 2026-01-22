@@ -5,6 +5,7 @@ venv/
 env/
 .venv/
 splitEnv/
+spltEnv/
 
 # =========================
 # Python cache
