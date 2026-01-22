@@ -14,7 +14,7 @@ from accounts.serializer import (
 from common.api.base_api import BaseAuthenticatedAPI
 from accounts.serializer import UserRoleCreateSerializer
 
-class UserListAPI(APIView):
+class UserListAPI(BaseAuthenticatedAPI):
     """
     GET:
     Returns list of all active users.
@@ -26,14 +26,20 @@ class UserListAPI(APIView):
         error = self.require_admin_role(request)
         if error:
             return error
-        # Fetch only active users
-        users = User.objects.filter(is_active=True).order_by('-created_at')
+        page_no = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 10))
 
-        # Serialize user data
+        qs = User.objects.filter(is_active=True).order_by('-created_at')
+        offset = (page_no - 1) * page_size
+        users = qs[offset:offset + page_size]
+
         serializer = UserGetSerializer(users, many=True)
-
-        # Return JSON response
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self.paginated_response(
+            data=serializer.data,
+            page_no=page_no,
+            page_size=page_size,
+            message="Users retrieved successfully"
+        )
     
 class UserDetailAPI(APIView):
     """

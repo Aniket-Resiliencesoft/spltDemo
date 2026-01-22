@@ -13,7 +13,7 @@ class User(BaseModel):
         (1, 'Active'),
     )
 
-    full_name = models.CharField(max_length=150)
+    full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     contact_no = models.CharField(max_length=15)
     password_hash = models.CharField(max_length=255)

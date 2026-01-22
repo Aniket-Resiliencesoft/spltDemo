@@ -120,8 +120,12 @@ $(document).ready(function () {
             success: function (response) {
                  setCookie("access_token", response.access_token, 1);
                  setCookie("user_role", response.user.role, 1);
+                 setCookie("user_name", response.user.full_name, 1);
+                 setCookie("user_email", response.user.email, 1);
                 localStorage.setItem("access_token", response.access_token);
                 localStorage.setItem("user_role", response.user.role);
+                localStorage.setItem("user_name", response.user.full_name);
+                localStorage.setItem("user_email", response.user.email);
                 if (response.user.role === "ADMIN") {
                     window.location.href = "{% url 'dashboard' %}";
                 } else {

@@ -1,0 +1,1059 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Money Admin | Admin Dashboard</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --sidebar-bg: linear-gradient(180deg, #0f172a, #111827);
+      --card-radius: 18px;
+    }
+
+    body {
+      background: #f6f7fb;
+      font-family: "Poppins", "Inter", "Segoe UI", sans-serif;
+      color: #111827;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      min-height: 100vh;
+      position: fixed;
+      background: var(--sidebar-bg);
+      color: #e5e7eb;
+      padding: 22px 0;
+      box-shadow: 8px 0 24px rgba(0,0,0,0.06);
+    }
+
+    .sidebar .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 24px 28px 24px;
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .sidebar .brand .logo-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      display: grid;
+      place-items: center;
+      color: #0f172a;
+      font-weight: 800;
+    }
+
+    .sidebar a {
+      color: #cbd5f5;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      transition: 0.2s ease;
+      font-weight: 500;
+    }
+
+    .sidebar a i {
+      font-size: 18px;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-left: 4px solid #4f46e5;
+      padding-left: 20px;
+    }
+
+    /* Content */
+    .content {
+      margin-left: 260px;
+      padding: 30px;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      margin-bottom: 26px;
+    }
+
+    .search-box {
+      max-width: 240px;
+    }
+
+    .profile-menu .avatar-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid #e5e7eb;
+      background: #f8fafc;
+      color: #0f172a;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .profile-menu .avatar-btn:hover {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+    }
+
+    .profile-menu .dropdown-menu {
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
+      min-width: 230px;
+      padding: 10px;
+    }
+
+    .profile-menu .dropdown-item i {
+      font-size: 16px;
+    }
+
+    .profile-menu .user-meta small {
+      color: #6b7280;
+    }
+
+    /* Cards */
+    .stat-card {
+      border: none;
+      border-radius: var(--card-radius);
+      padding: 22px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    }
+
+    .stat-card i {
+      position: absolute;
+      right: 18px;
+      bottom: 12px;
+      font-size: 60px;
+      opacity: 0.16;
+    }
+
+    .bg-blue { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    .bg-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .bg-orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .bg-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+    /* Cards general */
+    .card {
+      border-radius: var(--card-radius);
+      border: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    /* Table */
+    .table thead {
+      background: #eef2ff;
+    }
+
+    .chart-card {
+      height: 350px;
+    }
+
+    .section-block {
+      display: none;
+    }
+
+    .section-block.active {
+      display: block;
+    }
+
+    .nav-section.disabled {
+      pointer-events: none;
+      opacity: 0.55;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-circle"><i class="bi bi-cash-stack"></i></div>
+      <span>Money Admin</span>
+    </div>
+    <a href="#dashboard" class="active nav-section" data-section="dashboardSection"><i class="bi bi-speedometer2"></i>Dashboard</a>
+    <a href="#users" class="nav-section" data-section="usersSection"><i class="bi bi-people"></i>Users</a>
+    <a href="#events" class="nav-section" data-section="eventsSection"><i class="bi bi-calendar-event"></i>Events</a>
+    <a href="#payments" class="nav-section" data-section="paymentsSection"><i class="bi bi-wallet2"></i>Payments</a>
+    <a href="#payouts" class="nav-section disabled"><i class="bi bi-bank"></i>Vendor Payouts</a>
+    <a href="#reports" class="nav-section disabled"><i class="bi bi-graph-up"></i>Reports</a>
+    <a href="#settings" class="nav-section disabled"><i class="bi bi-gear"></i>Settings</a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+    <!-- Topbar -->
+    <div class="topbar d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold mb-0">Admin Dashboard</h5>
+      <div class="d-flex align-items-center gap-3">
+        <div class="search-box">
+          <input type="text" class="form-control form-control-sm" placeholder="Search...">
+        </div>
+        <i class="bi bi-bell fs-5"></i>
+        <div class="dropdown profile-menu">
+          <button class="btn avatar-btn" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle fs-5"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userMenuButton">
+            <li class="px-2 pb-2">
+              <div class="user-meta">
+                <h6 class="mb-0" id="profileName">Admin User</h6>
+                <small id="profileEmail">Signed in</small>
+              </div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item d-flex align-items-center" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li>
+              <button class="dropdown-item d-flex align-items-center text-danger" type="button" id="logoutBtn">
+                <i class="bi bi-box-arrow-right me-2"></i>Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <section id="dashboardSection" class="section-block active">
+      <!-- Stats -->
+      <div class="row g-4 mb-4">
+        <div class="col-md-3">
+          <div class="stat-card bg-blue">
+            <h6>Total Users</h6>
+            <h2 id="totalUsersCount">{{ total_users|default:0 }}</h2>
+            <i class="bi bi-people"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card bg-green">
+            <h6>Total Events</h6>
+            <h2 id="totalEventsCount">{{ total_events|default:0 }}</h2>
+            <i class="bi bi-calendar-check"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card bg-orange">
+            <h6>Collected Amount</h6>
+            <h2 id="collectedAmountVal">&#8377;{{ collected_amount|default:0|floatformat:"2" }}</h2>
+            <i class="bi bi-cash-stack"></i>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card bg-red">
+            <h6>Pending Payouts</h6>
+            <h2 id="pendingPayoutsVal">&#8377;{{ pending_payouts|default:0|floatformat:"2" }}</h2>
+            <i class="bi bi-exclamation-circle"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="row g-4">
+        <div class="col-md-8">
+          <div class="card shadow-sm p-4 chart-card">
+            <h6 class="fw-semibold mb-3">Monthly Collection</h6>
+            <canvas id="revenueChart" style="height: 333px;"></canvas>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card shadow-sm p-4 chart-card">
+            <h6 class="fw-semibold mb-3">Event Status</h6>
+            <canvas id="eventChart" style="width:250px !important; height:250px !important;"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="usersSection" class="section-block">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Users</span>
+          <button class="btn btn-sm btn-outline-primary" id="refreshUsers">Refresh</button>
+        </div>
+        <div class="card-body">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Contact</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+            </tbody>
+          </table>
+          <div class="d-flex justify-content-between align-items-center pt-3">
+            <small class="text-muted" id="usersPageLabel">Page 1</small>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" id="usersPrev">Prev</button>
+              <button class="btn btn-sm btn-outline-secondary" id="usersNext">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="eventsSection" class="section-block">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Events</span>
+          <button class="btn btn-sm btn-outline-primary" id="refreshEvents">Refresh</button>
+        </div>
+        <div class="card-body">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Category</th>
+                <th>Dates</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>People</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTableBody">
+              <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
+            </tbody>
+          </table>
+          <div class="d-flex justify-content-between align-items-center pt-3">
+            <small class="text-muted" id="eventsPageLabel">Page 1</small>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" id="eventsPrev">Prev</button>
+              <button class="btn btn-sm btn-outline-secondary" id="eventsNext">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="paymentsSection" class="section-block">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Payments</span>
+          <button class="btn btn-sm btn-outline-primary" id="refreshPayments">Refresh</button>
+        </div>
+        <div class="card-body">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>User</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsTableBody">
+              <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
+            </tbody>
+          </table>
+          <div class="d-flex justify-content-between align-items-center pt-3">
+            <small class="text-muted" id="paymentsPageLabel">Page 1</small>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary" id="paymentsPrev">Prev</button>
+              <button class="btn btn-sm btn-outline-secondary" id="paymentsNext">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(";");
+        for (let i = 0; i < ca.length; i++) {
+          let c = ca[i].trim();
+          if (c.indexOf(nameEQ) === 0) {
+            return decodeURIComponent(c.substring(nameEQ.length));
+          }
+        }
+        return "";
+      }
+
+      const storage = {
+        get(key) {
+          return window.localStorage.getItem(key) || getCookie(key);
+        },
+        clear(key) {
+          window.localStorage.removeItem(key);
+          document.cookie = key + "=; Max-Age=0; path=/";
+        }
+      };
+
+      const accessToken = storage.get("access_token");
+      if (!accessToken) {
+        window.location.href = "/account/login/";
+        return;
+      }
+
+      const profileName = document.getElementById("profileName");
+      const profileEmail = document.getElementById("profileEmail");
+      const storedName = storage.get("user_name");
+      const storedEmail = storage.get("user_email");
+      const storedRole = storage.get("user_role");
+
+      if (profileName) {
+        profileName.textContent = storedName || "Admin User";
+      }
+      if (profileEmail) {
+        profileEmail.textContent = storedEmail || storedRole || "Signed in";
+      }
+
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", function () {
+          ["access_token", "user_role", "user_name", "user_email"].forEach(function (key) {
+            storage.clear(key);
+          });
+          window.location.href = "/account/login/";
+        });
+      }
+
+      const sections = ["dashboardSection", "usersSection", "eventsSection", "paymentsSection"];
+      const cache = { users: null, events: null, payments: null };
+      const initialCounts = {
+        users: numberFromEl("totalUsersCount"),
+        events: numberFromEl("totalEventsCount"),
+        collected: currencyNumberFromEl("collectedAmountVal"),
+        pending: currencyNumberFromEl("pendingPayoutsVal"),
+      };
+
+      let revenueChart = null;
+      let eventChart = null;
+      let currentSection = "dashboardSection";
+      let sse = null;
+      const PAGE_SIZE = 10;
+      const pageState = {
+        users: { page: 1, hasNext: false },
+        events: { page: 1, hasNext: false },
+        payments: { page: 1, hasNext: false },
+      };
+
+      initNav();
+      hydrateFromHash();
+      loadDashboard(true);
+      startPolling("dashboardSection");
+      initSSE();
+
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) {
+          startPolling(currentSection); // immediate refresh on return
+        }
+      });
+      window.addEventListener("focus", function () {
+        startPolling(currentSection); // refresh when tab focused
+      });
+
+      const refreshUsers = document.getElementById("refreshUsers");
+      if (refreshUsers) refreshUsers.addEventListener("click", function () { loadUsersTable(true); });
+      const refreshEvents = document.getElementById("refreshEvents");
+      if (refreshEvents) refreshEvents.addEventListener("click", function () { loadEventsTable(true); });
+      const refreshPayments = document.getElementById("refreshPayments");
+      if (refreshPayments) refreshPayments.addEventListener("click", function () { loadPaymentsTable(true); });
+
+      // Pagination controls
+      bindPager("users");
+      bindPager("events");
+      bindPager("payments");
+
+      function initNav() {
+        document.querySelectorAll(".nav-section").forEach(function (link) {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+            const target = link.getAttribute("data-section");
+            if (!target) return;
+            setActiveNav(link);
+            showSection(target);
+            if (target === "dashboardSection") {
+              loadDashboard();
+            } else if (target === "usersSection") {
+              loadUsersTable();
+            } else if (target === "eventsSection") {
+              loadEventsTable();
+            } else if (target === "paymentsSection") {
+              loadPaymentsTable();
+            }
+          });
+        });
+        window.addEventListener("hashchange", hydrateFromHash);
+      }
+
+      function hydrateFromHash() {
+        const hash = (window.location.hash || "").replace("#", "");
+        const map = {
+          dashboard: "dashboardSection",
+          users: "usersSection",
+          events: "eventsSection",
+          payments: "paymentsSection"
+        };
+        const targetSection = map[hash] || "dashboardSection";
+        const targetLink = Array.from(document.querySelectorAll(".nav-section")).find(function (link) {
+          return link.getAttribute("data-section") === targetSection;
+        });
+        setActiveNav(targetLink || document.querySelector(".nav-section[data-section='dashboardSection']"));
+        showSection(targetSection);
+        if (targetSection === "dashboardSection") {
+          loadDashboard();
+        } else if (targetSection === "usersSection") {
+          loadUsersTable();
+        } else if (targetSection === "eventsSection") {
+          loadEventsTable();
+        } else if (targetSection === "paymentsSection") {
+          loadPaymentsTable();
+        }
+      }
+
+      function setActiveNav(activeLink) {
+        document.querySelectorAll(".nav-section").forEach(function (link) {
+          link.classList.toggle("active", link === activeLink);
+        });
+      }
+
+      function showSection(id) {
+        sections.forEach(function (sectionId) {
+          const el = document.getElementById(sectionId);
+          if (!el) return;
+          el.classList.toggle("active", sectionId === id);
+        });
+        currentSection = id;
+        startPolling(id);
+
+        // update hash for bookmarking and scroll into view
+        const hashMap = {
+          dashboardSection: "#dashboard",
+          usersSection: "#users",
+          eventsSection: "#events",
+          paymentsSection: "#payments"
+        };
+        if (hashMap[id]) {
+          history.replaceState(null, "", hashMap[id]);
+        }
+        const targetEl = document.getElementById(id);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
+      function startPolling(sectionId) {
+        const pollFns = {
+          dashboardSection: function () { loadDashboard(true); },
+          usersSection: function () { loadUsersTable(true); },
+          eventsSection: function () { loadEventsTable(true); },
+          paymentsSection: function () { loadPaymentsTable(true); },
+        };
+        const fn = pollFns[sectionId] || pollFns.dashboardSection;
+        fn(); // run immediately for freshness
+      }
+
+      function initSSE() {
+        try {
+          if (sse) {
+            sse.close();
+            sse = null;
+          }
+          sse = new EventSource("/account/stream/dashboard/");
+          sse.onmessage = function (evt) {
+            if (!evt.data) return;
+            try {
+              const payload = JSON.parse(evt.data);
+              applySnapshotCounts(payload);
+              if (currentSection === "usersSection") {
+                loadUsersTable(true);
+              } else if (currentSection === "eventsSection") {
+                loadEventsTable(true);
+              } else if (currentSection === "paymentsSection") {
+                loadPaymentsTable(true);
+              }
+            } catch (e) {
+              console.error("SSE parse error", e);
+            }
+          };
+          sse.onerror = function (err) {
+            console.warn("SSE error, retrying in 3s", err);
+            if (sse) {
+              sse.close();
+              sse = null;
+            }
+            setTimeout(initSSE, 3000);
+          };
+        } catch (err) {
+          console.warn("SSE init failed", err);
+        }
+      }
+
+      async function loadDashboard(force) {
+        const results = await Promise.allSettled([
+          getUsers(force),
+          getEvents(force),
+          getPayments(force)
+        ]);
+
+        const usersRes = results[0].status === "fulfilled" ? results[0].value : cache.users;
+        const eventsRes = results[1].status === "fulfilled" ? results[1].value : cache.events;
+        const paymentsRes = results[2].status === "fulfilled" ? results[2].value : cache.payments;
+
+        const users = usersRes && usersRes.list ? usersRes.list : usersRes;
+        const events = eventsRes && eventsRes.list ? eventsRes.list : eventsRes;
+        const payments = paymentsRes && paymentsRes.list ? paymentsRes.list : paymentsRes;
+
+        if (results[0].status === "rejected") console.warn("Users API unavailable:", results[0].reason);
+        if (results[1].status === "rejected") console.warn("Events API unavailable:", results[1].reason);
+        if (results[2].status === "rejected") console.warn("Payments API unavailable:", results[2].reason);
+
+        updateCounts(users, events, payments);
+        updateCharts(events, payments);
+      }
+
+      function applySnapshotCounts(payload) {
+        if (!payload || typeof payload !== "object") return;
+        const users = Array.isArray(payload.users) ? payload.users : null;
+        const events = Array.isArray(payload.events) ? payload.events : null;
+        const payments = Array.isArray(payload.payments) ? payload.payments : null;
+        const totals = payload.totals || {};
+        const charts = payload.charts || {};
+
+        updateCounts(users, events, payments, totals);
+        updateCharts(events, payments, charts);
+      }
+
+      async function loadUsersTable(force) {
+        const target = document.getElementById("usersTableBody");
+        setPlaceholder(target, "Loading...");
+        try {
+          const page = pageState.users.page;
+          const { list, hasNext } = await getUsers(force, page);
+          pageState.users.hasNext = hasNext;
+          renderUsers(list, target);
+          updateCounts(list, cache.events, cache.payments);
+          updatePager("users");
+        } catch (err) {
+          console.error(err);
+          setPlaceholder(target, err.message || "Failed to load users");
+        }
+      }
+
+      async function loadEventsTable(force) {
+        const target = document.getElementById("eventsTableBody");
+        setPlaceholder(target, "Loading...");
+        try {
+          const page = pageState.events.page;
+          const { list, hasNext } = await getEvents(force, page);
+          pageState.events.hasNext = hasNext;
+          renderEvents(list, target);
+          updateCounts(cache.users, list, cache.payments);
+          updateCharts(list, cache.payments);
+          updatePager("events");
+        } catch (err) {
+          console.error(err);
+          setPlaceholder(target, err.message || "Failed to load events");
+        }
+      }
+
+      async function loadPaymentsTable(force) {
+        const target = document.getElementById("paymentsTableBody");
+        setPlaceholder(target, "Loading...");
+        try {
+          const page = pageState.payments.page;
+          const { list, hasNext } = await getPayments(force, page);
+          pageState.payments.hasNext = hasNext;
+          renderPayments(list, target);
+          updateCounts(cache.users, cache.events, list);
+          updateCharts(cache.events, list);
+          updatePager("payments");
+        } catch (err) {
+          console.warn("Payments API failed", err);
+          setPlaceholder(target, err.message || "Failed to load payments");
+        }
+      }
+
+      async function apiGet(path) {
+        const headers = { Accept: "application/json" };
+        if (accessToken) {
+          headers["Authorization"] = `Bearer ${accessToken}`;
+        }
+        const res = await fetch(path, {
+          method: "GET",
+          headers,
+          credentials: "same-origin",
+          cache: "no-cache"
+        });
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (_) {}
+        if (!res.ok) {
+          const msg = (data && (data.message || data.Message)) || res.statusText || "Request failed";
+          throw new Error(msg);
+        }
+        return data;
+      }
+
+      async function getUsers(force, page) {
+        page = page || 1;
+        if (cache.users && !force && page === pageState.users.page) {
+          return { list: cache.users, hasNext: pageState.users.hasNext };
+        }
+        const payload = await apiGet(`/account/users/?page=${page}&page_size=${PAGE_SIZE}`);
+        const list = unwrap(payload);
+        cache.users = list;
+        const hasNext = Array.isArray(list) && list.length >= PAGE_SIZE;
+        pageState.users.page = page;
+        pageState.users.hasNext = hasNext;
+        return { list, hasNext };
+      }
+
+      async function getEvents(force, page) {
+        page = page || 1;
+        if (cache.events && !force && page === pageState.events.page) {
+          return { list: cache.events, hasNext: pageState.events.hasNext };
+        }
+        const payload = await apiGet(`/api/events/?page=${page}&page_size=${PAGE_SIZE}`);
+        const list = unwrap(payload);
+        cache.events = list;
+        const hasNext = Array.isArray(list) && list.length >= PAGE_SIZE;
+        pageState.events.page = page;
+        pageState.events.hasNext = hasNext;
+        return { list, hasNext };
+      }
+
+      async function getPayments(force, page) {
+        page = page || 1;
+        if (cache.payments && !force && page === pageState.payments.page) {
+          return { list: cache.payments, hasNext: pageState.payments.hasNext };
+        }
+        const payload = await apiGet(`/api/transactions/?page=${page}&page_size=${PAGE_SIZE}`);
+        const list = unwrap(payload);
+        cache.payments = list;
+        const hasNext = Array.isArray(list) && list.length >= PAGE_SIZE;
+        pageState.payments.page = page;
+        pageState.payments.hasNext = hasNext;
+        return { list, hasNext };
+      }
+
+      function bindPager(type) {
+        const prevBtn = document.getElementById(`${type}Prev`);
+        const nextBtn = document.getElementById(`${type}Next`);
+        if (!prevBtn || !nextBtn) return;
+        prevBtn.addEventListener("click", function () {
+          pageState[type].page = Math.max(1, pageState[type].page - 1);
+          if (type === "users") loadUsersTable(true);
+          if (type === "events") loadEventsTable(true);
+          if (type === "payments") loadPaymentsTable(true);
+        });
+        nextBtn.addEventListener("click", function () {
+          if (!pageState[type].hasNext) return;
+          pageState[type].page += 1;
+          if (type === "users") loadUsersTable(true);
+          if (type === "events") loadEventsTable(true);
+          if (type === "payments") loadPaymentsTable(true);
+        });
+      }
+
+      function updatePager(type) {
+        const label = document.getElementById(`${type}PageLabel`);
+        const prevBtn = document.getElementById(`${type}Prev`);
+        const nextBtn = document.getElementById(`${type}Next`);
+        const state = pageState[type];
+        if (label && state) {
+          label.textContent = `Page ${state.page}`;
+        }
+        if (prevBtn && state) {
+          prevBtn.disabled = state.page <= 1;
+        }
+        if (nextBtn && state) {
+          nextBtn.disabled = !state.hasNext;
+        }
+      }
+
+      function unwrap(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.Data)) return payload.Data;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        return [];
+      }
+
+      function renderUsers(users, target) {
+        if (!target) return;
+        if (!users || !users.length) {
+          return setPlaceholder(target, "No users found");
+        }
+        const rows = users.slice(0, 10).map(function (user) {
+          const isActive = user.status === 1 || user.status === "1" || String(user.status).toLowerCase() === "active";
+          const badge = isActive ? "bg-success" : "bg-secondary";
+          const label = isActive ? "Active" : "Inactive";
+          return (
+            "<tr>" +
+            `<td>${safe(user.full_name)}</td>` +
+            `<td>${safe(user.email)}</td>` +
+            `<td>${safe(user.contact_no || "")}</td>` +
+            `<td><span class="badge ${badge}">${label}</span></td>` +
+            "</tr>"
+          );
+        }).join("");
+        target.innerHTML = rows;
+      }
+
+      function renderEvents(events, target) {
+        if (!target) return;
+        if (!events || !events.length) {
+          return setPlaceholder(target, "No events found");
+        }
+        const rows = events.slice(0, 10).map(function (ev) {
+          const status = ev.status || "";
+          const statusDisplay = ev.status_display || status || "N/A";
+          const badge = status === "completed" ? "bg-success"
+            : status === "active" ? "bg-primary"
+            : status === "closed" ? "bg-secondary"
+            : status === "cancelled" ? "bg-danger"
+            : "bg-warning text-dark";
+          const start = ev.start_date_time || ev.start_datetime || ev.event_date || "";
+          const end = ev.end_date_time || ev.end_datetime || ev.due_pay_date || "";
+          const persons = ev.persons_count || ev.persons || ev.persons_cnt || "";
+          return (
+            "<tr>" +
+            `<td>${safe(ev.title)}</td>` +
+            `<td>${safe(ev.category_display || ev.category || "")}</td>` +
+            `<td>${safe(formatDate(start))} - ${safe(formatDate(end))}</td>` +
+            `<td>${safe(ev.created_by_name || "")}</td>` +
+            `<td><span class="badge ${badge}">${safe(statusDisplay)}</span></td>` +
+            `<td>${safe(persons)}</td>` +
+            "</tr>"
+          );
+        }).join("");
+        target.innerHTML = rows;
+      }
+
+      function renderPayments(payments, target) {
+        if (!target) return;
+        if (!payments || !payments.length) {
+          return setPlaceholder(target, "No payments found");
+        }
+        const rows = payments.slice(0, 10).map(function (tx) {
+          return (
+            "<tr>" +
+            `<td>${safe(tx.event_title || "")}</td>` +
+            `<td>${safe(tx.user_name || "")}</td>` +
+            `<td>${formatCurrency(tx.amount)} <span class="badge ${paymentBadge(tx.status)} ms-2">${safe(tx.status_display || tx.status || "")}</span></td>` +
+            "</tr>"
+          );
+        }).join("");
+        target.innerHTML = rows;
+      }
+
+      function updateCounts(users, events, payments, totalsOverride) {
+        const totalUsersEl = document.getElementById("totalUsersCount");
+        const totalEventsEl = document.getElementById("totalEventsCount");
+        const collectedEl = document.getElementById("collectedAmountVal");
+        const pendingEl = document.getElementById("pendingPayoutsVal");
+
+        const userCount = Array.isArray(users) ? users.length : (totalsOverride && totalsOverride.users) || initialCounts.users || 0;
+        const eventCount = Array.isArray(events) ? events.length : (totalsOverride && totalsOverride.events) || initialCounts.events || 0;
+
+        if (totalUsersEl) totalUsersEl.textContent = userCount;
+        if (totalEventsEl) totalEventsEl.textContent = eventCount;
+
+        const collected = Array.isArray(payments) ? sumAmount(payments, "completed") : (totalsOverride && totalsOverride.collected) || (initialCounts.collected || 0);
+        const pending = Array.isArray(payments) ? sumAmount(payments, "pending") : (totalsOverride && totalsOverride.pending) || (initialCounts.pending || 0);
+
+        if (collectedEl) collectedEl.textContent = formatCurrency(collected);
+        if (pendingEl) pendingEl.textContent = formatCurrency(pending);
+      }
+
+      function sumAmount(list, statusValue) {
+        if (!Array.isArray(list)) return 0;
+        return list.reduce(function (acc, tx) {
+          if (!statusValue || String(tx.status).toLowerCase() === statusValue) {
+            const val = Number(tx.amount) || 0;
+            return acc + val;
+          }
+          return acc;
+        }, 0);
+      }
+
+      function updateCharts(events, payments, chartOverride) {
+        const monthly = chartOverride && chartOverride.monthly_labels
+          ? { labels: chartOverride.monthly_labels, amounts: chartOverride.monthly_amounts || [] }
+          : aggregateMonthly(payments);
+
+        if (!revenueChart) {
+          revenueChart = createRevenueChart(monthly.labels, monthly.amounts);
+        } else {
+          revenueChart.data.labels = monthly.labels;
+          revenueChart.data.datasets[0].data = monthly.amounts;
+          revenueChart.update();
+        }
+
+        const statusAgg = chartOverride && chartOverride.status_labels
+          ? { labels: chartOverride.status_labels, counts: chartOverride.status_counts || [] }
+          : aggregateStatus(events);
+
+        if (!eventChart) {
+          eventChart = createEventChart(statusAgg.labels, statusAgg.counts);
+        } else {
+          eventChart.data.labels = statusAgg.labels;
+          eventChart.data.datasets[0].data = statusAgg.counts;
+          eventChart.update();
+        }
+      }
+
+      function aggregateMonthly(transactions) {
+        const map = new Map();
+        if (Array.isArray(transactions)) {
+          transactions.forEach(function (tx) {
+            if (!tx || String(tx.status).toLowerCase() !== "completed") return;
+            const dt = new Date(tx.transaction_date);
+            if (isNaN(dt)) return;
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+            const label = dt.toLocaleString("en-US", { month: "short" });
+            const current = map.get(key) || { label: label, total: 0 };
+            current.total += Number(tx.amount) || 0;
+            map.set(key, current);
+          });
+        }
+        const sorted = Array.from(map.entries()).sort(function (a, b) {
+          return a[0] < b[0] ? -1 : 1;
+        });
+        return {
+          labels: sorted.map(function (item) { return item[1].label; }),
+          amounts: sorted.map(function (item) { return Number(item[1].total.toFixed(2)); })
+        };
+      }
+
+      function aggregateStatus(events) {
+        const counts = {};
+        if (Array.isArray(events)) {
+          events.forEach(function (ev) {
+            const key = ev.status_display || ev.status || "Unknown";
+            counts[key] = (counts[key] || 0) + 1;
+          });
+        }
+        return {
+          labels: Object.keys(counts),
+          counts: Object.keys(counts).map(function (k) { return counts[k]; })
+        };
+      }
+
+      function createRevenueChart(labels, data) {
+        const ctx = document.getElementById("revenueChart");
+        if (!ctx) return null;
+        return new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: labels || [],
+            datasets: [{
+              label: "Amount (\u20b9)",
+              data: data || [],
+              tension: 0.45,
+              fill: true,
+              backgroundColor: "rgba(99, 102, 241, 0.12)",
+              borderColor: "#4f46e5",
+              pointBackgroundColor: "#4f46e5"
+            }]
+          },
+          options: {
+            plugins: { legend: { display: true, position: "top" } },
+            scales: { y: { beginAtZero: false } }
+          }
+        });
+      }
+
+      function createEventChart(labels, data) {
+        const ctx = document.getElementById("eventChart");
+        if (!ctx) return null;
+        return new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: labels || [],
+            datasets: [{
+              data: data || [],
+              backgroundColor: ["#2563eb", "#ec4899", "#f59e0b", "#16a34a", "#dc2626", "#0ea5e9", "#a855f7"]
+            }]
+          },
+          options: {
+            plugins: { legend: { position: "top" } },
+            cutout: "55%"
+          }
+        });
+      }
+
+      function paymentBadge(status) {
+        const val = (status || "").toString().toLowerCase();
+        if (val === "completed") return "bg-success";
+        if (val === "pending") return "bg-warning text-dark";
+        if (val === "failed") return "bg-danger";
+        return "bg-secondary";
+      }
+
+      function formatCurrency(amount) {
+        const num = Number(amount) || 0;
+        return "\u20b9" + num.toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+
+      function formatDate(val) {
+        if (!val) return "";
+        const dt = new Date(val);
+        if (isNaN(dt)) return val;
+        return dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      }
+
+      function numberFromEl(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const n = parseInt((el.textContent || "").replace(/\D+/g, ""), 10);
+        return isNaN(n) ? 0 : n;
+      }
+
+      function currencyNumberFromEl(id) {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const txt = (el.textContent || "").replace(/[^\d.-]/g, "");
+        const n = parseFloat(txt);
+        return isNaN(n) ? 0 : n;
+      }
+
+      function setPlaceholder(target, message) {
+        if (!target) return;
+        const colSpan = target?.parentElement?.querySelectorAll("th")?.length || 3;
+        target.innerHTML = `<tr><td colspan="${colSpan}" class="text-center text-muted">${safe(message)}</td></tr>`;
+      }
+
+      function safe(val) {
+        if (val === null || val === undefined) return "";
+        return String(val).replace(/[&<>]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c;
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
