@@ -87,7 +87,7 @@ def adminDashBoard(request):
         # Likely migrations missing; keep defaults and let page render
         pass
 
-    return render(request, 'splitmoneyDashBoard.html', context)
+    return render(request, 'adminDashBoard.html', context)
 
 
 def dashboard_stream(request):

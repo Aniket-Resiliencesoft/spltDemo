@@ -11,16 +11,16 @@ from events.api_views.event_api import (
 
 urlpatterns = [
     # List and Create
-    path('events/', EventListAPI.as_view()),
-    path('events/create/', EventCreateAPI.as_view()),
+    path('api/events/', EventListAPI.as_view()),
+    path('api/events/create/', EventCreateAPI.as_view()),
     
     # Detail, Update, Delete
-    path('events/<int:event_id>/', EventDetailAPI.as_view()),
-    path('events/<int:event_id>/update/', EventUpdateAPI.as_view()),
-    path('events/<int:event_id>/delete/', EventDeleteAPI.as_view()),
+    path('api/events/<int:event_id>/', EventDetailAPI.as_view()),
+    path('api/events/<int:event_id>/update/', EventUpdateAPI.as_view()),
+    path('api/events/<int:event_id>/delete/', EventDeleteAPI.as_view()),
     
     # Status update
-    path('events/<int:event_id>/status/', EventStatusUpdateAPI.as_view()),
+    path('api/events/<int:event_id>/status/', EventStatusUpdateAPI.as_view()),
     # Summary
     path('events/<int:event_id>/summary/', EventSummaryAPI.as_view()),
 ]

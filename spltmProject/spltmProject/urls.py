@@ -21,8 +21,8 @@ from accounts.ui_views import login_view,adminDashBoard
 urlpatterns = [
     path('', login_view),  
     path('dashboard/',adminDashBoard,name='dashboard'),
-    path('account/',include('accounts.urls')),
-    path('api/',include('events.urls')),
-    path('api/',include('payments.urls')),
+    path('',include('accounts.urls')),
+    path('',include('events.urls')),
+    path('',include('payments.urls')),
     path('admin/', admin.site.urls),
 ]
