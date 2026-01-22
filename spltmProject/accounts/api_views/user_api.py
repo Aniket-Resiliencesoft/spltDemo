@@ -70,7 +70,6 @@ class UserCreateAPI(APIView):
 
     def post(self, request):
         serializer = UserCreateSerializer(data=request.data)
-        print("serializer.initial_data")
         if serializer.is_valid():
             data = serializer.validated_data
 

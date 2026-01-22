@@ -121,6 +121,7 @@ class Event(BaseModel):
                     'id': u.id,
                     'full_name': getattr(u, 'full_name', str(u)),
                     'email': getattr(u, 'email', None),
+                    # 'ammount_paid': qs.filter(user=u, status='completed').aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
                 })
 
         created_by_info = None
