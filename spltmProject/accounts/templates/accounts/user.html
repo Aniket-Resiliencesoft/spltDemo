@@ -1,0 +1,126 @@
+{% extends "adminDashboard.html" %}
+{% load static %}
+
+{% block title %}User Management | Admin{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/users.css' %}">
+<div id="users-page" class="container-fluid py-4 animate-fade-in">
+    
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h3 class="fw-bold text-white mb-1">User Directory</h3>
+            <p class="text-secondary">Manage access levels and monitor user engagement.</p>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex gap-3 justify-content-md-end">
+                <div class="search-wrapper flex-grow-1" style="max-width: 300px;">
+                    <i class="ti ti-search text-muted"></i>
+                    <input type="text" class="form-control-dark ps-5" placeholder="Search by name or email...">
+                </div>
+                <button class="btn btn-glass-secondary"><i class="ti ti-download"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card table-glass-card">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">S.No</th>
+                        <th>User Identity</th>
+                        <th>Contact Information</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ps-4 text-muted small">01</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circles me-3">AV</div>
+                                <div>
+                                    <div class="text-white fw-semibold">Ankit Verma</div>
+                                    <div class="text-secondary x-small">Member since Jan 2026</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-light small"><i class="ti ti-mail me-1"></i> ankit@gmail.com</div>
+                            <div class="text-secondary x-small"><i class="ti ti-phone me-1"></i> +91 9876543210</div>
+                        </td>
+                        <td><span class="badge-glass badge-success">Active</span></td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-action-icon"><i class="ti ti-edit"></i></button>
+                            <button class="btn btn-action-icon text-danger"><i class="ti ti-ban"></i></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="ps-4 text-muted small">02</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                 <div class="avatar-circles me-3">NP</div>
+                                <div>
+                                    <div class="text-white fw-semibold">Neha Patel</div>
+                                    <div class="text-secondary x-small">Member since Feb 2026</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-light small"><i class="ti ti-mail me-1"></i> neha@gmail.com</div>
+                            <div class="text-secondary x-small"><i class="ti ti-phone me-1"></i> +91 9123456789</div>
+                        </td>
+                        <td><span class="badge-glass badge-warning">Inactive</span></td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-action-icon"><i class="ti ti-edit"></i></button>
+                            <button class="btn btn-action-icon text-danger"><i class="ti ti-ban"></i></button>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="ps-4 text-muted small">03</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circles me-3">RS</div>
+                                <div>
+                                    <div class="text-white fw-semibold">Rahul Singh</div>
+                                    <div class="text-secondary x-small">Blocked on 15 Jan</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-light small"><i class="ti ti-mail me-1"></i> rahul@gmail.com</div>
+                            <div class="text-secondary x-small"><i class="ti ti-phone me-1"></i> +91 9988776655</div>
+                        </td>
+                        <td><span class="badge-glass badge-danger">Blocked</span></td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-action-icon"><i class="ti ti-history"></i></button>
+                            <button class="btn btn-action-icon text-success"><i class="ti ti-refresh"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer d-flex align-items-center justify-content-between border-0 py-3 px-4">
+            <div class="text-secondary small">
+                Showing <span class="text-white">1</span> to <span class="text-white">3</span> of 48 users
+            </div>
+            <nav>
+                <ul class="pagination pagination-midnight mb-0">
+                    <li class="page-item disabled"><a class="page-link" href="#"><i class="ti ti-chevron-left"></i></a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link" href="#"><i class="ti ti-chevron-right"></i></a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}

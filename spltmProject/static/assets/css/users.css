@@ -1,0 +1,110 @@
+/* Table Card Styling */
+.table-glass-card {
+    background: rgba(30, 41, 59, 0.45) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.custom-table thead {
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.custom-table thead th {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.custom-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.custom-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.custom-table td {
+    padding-top: 1.2rem;
+    padding-bottom: 1.2rem;
+    border: none;
+}
+
+/* Avatar Circle */
+.avatar-circles {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.bg-info-soft { background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); }
+.bg-danger-soft { background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%); }
+
+/* Small Text Helpers */
+.x-small { font-size: 0.7rem; }
+
+/* Buttons & Icons */
+.btn-action-icon {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-action-icon:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Pagination Midnight Theme */
+.pagination-midnight .page-link {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    margin: 0 3px;
+    border-radius: 8px !important;
+    padding: 6px 14px;
+    transition: all 0.3s;
+}
+
+.pagination-midnight .page-item.active .page-link {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.pagination-midnight .page-link:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}

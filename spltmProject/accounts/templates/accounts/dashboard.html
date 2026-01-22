@@ -1,0 +1,149 @@
+{% extends "adminDashboard.html" %}
+{% load static %}
+
+{% block title %}Event Management | Admin{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+
+<div id="dashboard-wrapper" class="container-fluid py-4">
+    
+    <div class="row mb-4 animate-fade-in">
+        <div class="col-md-8">
+            <h3 class="fw-bold text-white mb-1">Welcome, Admin</h3>
+            <p class="text-secondary">Real-time monitoring and event life-cycle management.</p>
+        </div>
+    </div>
+
+    <div class="card filter-glass mb-4 animate-slide-down">
+        <div class="card-body p-3">
+            <form class="row g-3 align-items-center">
+                <div class="col-xl-3 col-md-6">
+                    <div class="input-group-custom">
+                        <i class="ti ti-search icon-left"></i>
+                        <input type="text" class="form-control-dark" placeholder="Search events...">
+                    </div>
+                </div>
+                <div class="col-xl-2 col-md-6">
+                    <select class="form-select-dark">
+                        <option selected>All Status</option>
+                        <option>Active</option>
+                        <option>Completed</option>
+                        <option>Pending</option>
+                    </select>
+                </div>
+                <div class="col-xl-4 col-md-8">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="date" class="form-control-dark">
+                        <span class="text-muted">to</span>
+                        <input type="date" class="form-control-dark">
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-glass-primary w-100">Apply Filters</button>
+                    <button type="reset" class="btn btn-glass-secondary"><i class="ti ti-refresh"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-4 col-md-6">
+            <div class="event-pro-card active-glow">
+                <div class="card-status-bar bg-success"></div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge-glass badge-success">Active</span>
+                    <div class="dropdown">
+                        <i class="ti ti-dots-vertical cursor-pointer text-muted"></i>
+                    </div>
+                </div>
+                
+                <h5 class="event-title">Turf Booking Saturday</h5>
+                <div class="location-tag mb-3">
+                    <i class="ti ti-map-pin"></i> Urban Sports Arena
+                </div>
+
+                <div class="stat-row">
+                    <div class="stat-group">
+                        <small>Schedule</small>
+                        <div class="text-white small">24 Feb • 06:00 PM</div>
+                    </div>
+                    <div class="stat-group text-end">
+                        <small>Capacity</small>
+                        <div class="text-white small">8/10</div>
+                    </div>
+                </div>
+
+                <div class="progress progress-dark mb-4">
+                    <div class="progress-bar bg-primary progress-animated" style="width: 80%"></div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="d-block text-muted">Revenue</small>
+                        <span class="fw-bold text-white">₹4,000</span> <small class="text-secondary">/ 5k</small>
+                    </div>
+                    <a href="#" class="btn btn-outline-custom btn-sm">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="event-pro-card pending-glow">
+                <div class="card-status-bar bg-warning"></div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge-glass badge-warning">Pending</span>
+                    <i class="ti ti-dots-vertical text-muted"></i>
+                </div>
+                <h5 class="event-title">Birthday Party Event</h5>
+                <div class="location-tag mb-3">
+                    <i class="ti ti-user"></i> Ankit Verma
+                </div>
+                <div class="stat-row">
+                    <div class="stat-group"><small>Date</small><div class="text-white small">28 Feb 2026</div></div>
+                    <div class="stat-group text-end"><small>Capacity</small><div class="text-white small">5/8</div></div>
+                </div>
+                <div class="progress progress-dark mb-4">
+                    <div class="progress-bar bg-warning progress-animated" style="width: 62%"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="d-block text-muted">Revenue</small>
+                        <span class="fw-bold text-white">₹2,000</span> <small class="text-secondary">/ 3.2k</small>
+                    </div>
+                    <a href="#" class="btn btn-outline-custom btn-sm">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="event-pro-card completed-glow">
+                <div class="card-status-bar bg-info"></div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge-glass badge-info">Completed</span>
+                    <i class="ti ti-dots-vertical text-muted"></i>
+                </div>
+                <h5 class="event-title">Restaurant Bill Split</h5>
+                <div class="location-tag mb-3">
+                    <i class="ti ti-user"></i> Neha Patel
+                </div>
+                <div class="stat-row">
+                    <div class="stat-group"><small>Date</small><div class="text-white small">15 Feb 2026</div></div>
+                    <div class="stat-group text-end"><small>Capacity</small><div class="text-white small">6/6</div></div>
+                </div>
+                <div class="progress progress-dark mb-4">
+                    <div class="progress-bar bg-info progress-animated" style="width: 100%"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="d-block text-muted">Revenue</small>
+                        <span class="fw-bold text-info">₹2,400 <i class="ti ti-circle-check"></i></span>
+                    </div>
+                    <a href="#" class="btn btn-outline-custom btn-sm">Invoiced</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -87,7 +87,7 @@ def adminDashBoard(request):
         # Likely migrations missing; keep defaults and let page render
         pass
 
-    return render(request, 'splitmoneyDashBoard.html', context)
+    return render(request, 'accounts/dashboard.html', context)
 
 
 def dashboard_stream(request):
@@ -218,3 +218,10 @@ def dashboard_stream(request):
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
+
+
+def dashboard(request):
+    return render(request, 'accounts/dashboard.html')
+
+def users(request):
+    return render(request, 'accounts/user.html')

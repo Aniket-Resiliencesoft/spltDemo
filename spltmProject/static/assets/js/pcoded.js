@@ -1,5 +1,7 @@
 // 'use strict';
 var flg = '0';
+document.documentElement.setAttribute('data-pc-theme', 'dark');
+document.body.setAttribute('data-pc-theme', 'dark');
 document.addEventListener('DOMContentLoaded', function () {
   // feather icon start
   feather.replace();
@@ -306,22 +308,22 @@ if (layout_reset) {
   });
 }
 // ----------    new setup start   ------------
-function layout_change_default(){
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      dark_layout = 'dark';
-  }else{
-      dark_layout = 'light';
-  }
-  layout_change(dark_layout);
-  var btn_control = document.querySelector('.theme-layout .btn[data-value="default"]');
-  if (btn_control) {
-    btn_control.classList.add('active');
-  }
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    dark_layout = event.matches ? "dark" : "light";
-    layout_change(dark_layout);
-  });
-}
+// function layout_change_default(){
+//   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+//       dark_layout = 'dark';
+//   }else{
+//       dark_layout = 'dark';
+//   }
+//   layout_change(dark_layout);
+//   var btn_control = document.querySelector('.theme-layout .btn[data-value="default"]');
+//   if (btn_control) {
+//     btn_control.classList.add('active');
+//   }
+//   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+//     dark_layout = event.matches ? "dark" : "dark";
+//     layout_change(dark_layout);
+//   });
+// }
 // preset color
 document.addEventListener('DOMContentLoaded', function () {
   var if_exist = document.querySelectorAll('.preset-color');
@@ -412,45 +414,34 @@ function layout_rtl_change(value) {
   }
 }
 function layout_change(layout) {
-  var control = document.querySelector('.pct-offcanvas');
-  document.getElementsByTagName('body')[0].setAttribute('data-pc-theme', layout);
+  layout = 'dark'; // 🔒 LOCKED
 
-  var btn_control = document.querySelector('.theme-layout .btn[data-value="default"]');
-  if (btn_control) {
-    btn_control.classList.remove('active');
+  document.body.setAttribute('data-pc-theme', 'dark');
+  dark_flag = true;
+
+  // Dark logos
+  if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
+    document.querySelector(".pc-sidebar .m-header .logo-lg")
+      .setAttribute('src', '../assets/images/logo-white.svg');
   }
-  if (layout == 'dark') {
-    dark_flag = true;
-    if (control) {
-      if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
-        document.querySelector(".pc-sidebar .m-header .logo-lg").setAttribute('src', '../assets/images/logo-white.svg');
-      }
-      if (document.querySelector('.auth-header')) {
-        document.querySelector(".auth-header img").setAttribute('src', '../assets/images/logo-white.svg');
-      }
-    }
-    var control = document.querySelector('.theme-layout .btn.active');
-    if (control) {
-      document.querySelector('.theme-layout .btn.active').classList.remove('active');
-      document.querySelector(".theme-layout .btn[data-value='false']").classList.add('active');
-    }
-  } else {
-    dark_flag = false;
-    if (control) {
-      if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
-        document.querySelector(".pc-sidebar .m-header .logo-lg").setAttribute('src', '../assets/images/logo-dark.svg');
-      }
-      if (document.querySelector('.auth-header')) {
-        document.querySelector(".auth-header img").setAttribute('src', '../assets/images/logo-dark.svg');
-      }
-    }
-    var control = document.querySelector('.theme-layout .btn.active');
-    if (control) {
-      document.querySelector('.theme-layout .btn.active').classList.remove('active');
-      document.querySelector(".theme-layout .btn[data-value='true']").classList.add('active');
-    }
+
+  if (document.querySelector('.auth-header img')) {
+    document.querySelector(".auth-header img")
+      .setAttribute('src', '../assets/images/logo-white.svg');
+  }
+
+  // Button active state (optional)
+  var control = document.querySelector('.theme-layout .btn.active');
+  if (control) {
+    control.classList.remove('active');
+  }
+
+  var darkBtn = document.querySelector(".theme-layout .btn[data-value='false']");
+  if (darkBtn) {
+    darkBtn.classList.add('active');
   }
 }
+
 function change_box_container(value) {
   if (document.querySelector('.pc-content')) {
     if (value == 'true') {

@@ -1,0 +1,163 @@
+/* Modal Glassmorphism */
+.modal-glass {
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.event-summary-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.participant-scroll {
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar */
+.participant-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.participant-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.bg-dark-soft {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.avatar-circle-sm {
+    width: 30px;
+    height: 30px;
+    background: #6366f1;
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+/* Ensure the View Details button matches the theme */
+.btn-outline-custom {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.btn-outline-custom:hover {
+    background: white;
+    color: #0f172a;
+}
+
+/* Search Styling */
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    font-size: 1.1rem;
+}
+
+/* Pagination Theme */
+.pagination-midnight .page-link {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    margin: 0 3px;
+    border-radius: 8px !important;
+    padding: 6px 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pagination-midnight .page-item.active .page-link {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.pagination-midnight .page-link:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.pagination-midnight .page-item.disabled .page-link {
+    background: rgba(15, 23, 42, 0.2);
+    border-color: rgba(255, 255, 255, 0.03);
+    color: #475569;
+}
+
+/* Row Hover Effects */
+.custom-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.custom-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+/* Status Indicator Wrapper */
+.status-indicator-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(34, 197, 94, 0.1); /* Subtle green tint background */
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* The Glowing Dot */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #22c55e; /* Vibrant Green */
+    border-radius: 50%;
+    position: relative;
+}
+
+/* The Pulsing Animation Layer */
+.pulse-dot::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #22c55e;
+    border-radius: 50%;
+    z-index: -1;
+    animation: statusPulse 2s infinite;
+}
+
+.status-text-xs {
+    color: #22c55e;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Keyframes for the Glow Effect */
+@keyframes statusPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}

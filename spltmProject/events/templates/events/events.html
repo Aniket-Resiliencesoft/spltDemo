@@ -1,0 +1,148 @@
+
+
+{% extends "adminDashboard.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/users.css' %}">
+<link rel="stylesheet" href="{% static 'assets/css/events.css' %}">
+<div id="events-page" class="container-fluid py-4 animate-fade-in">
+    
+    <div class="row align-items-center mb-4">
+        <div class="col-xl-4 col-md-6">
+            <h3 class="fw-bold text-white mb-1">Event Master List</h3>
+            <p class="text-secondary small">Overview of bookings, revenue, and attendance.</p>
+        </div>
+        <div class="col-xl-8 col-md-6">
+            <div class="d-flex gap-3 justify-content-md-end align-items-center">
+                <div class="search-wrapper flex-grow-1" style="max-width: 350px;">
+                    <i class="ti ti-search text-muted"></i>
+                    <input type="text" class="form-control-dark ps-5" placeholder="Search events, venues, or IDs...">
+                </div>
+                <button class="btn btn-glass-secondary" title="Export CSV"><i class="ti ti-download"></i></button>
+                <button class="btn btn-primary-gradient px-4"><i class="ti ti-plus me-1"></i> Create New</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card table-glass-card shadow-lg">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">S.No</th>
+                        <th>Event & Location</th>
+                        <th>Schedule</th>
+                        <th>Capacity</th>
+                        <th>Revenue</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ps-4 text-muted small">01</td>
+                        <td>
+                            <div class="text-white fw-semibold">Turf Booking Saturday</div>
+                            <div class="text-secondary x-small"><i class="ti ti-map-pin me-1"></i> Urban Sports Arena</div>
+                        </td>
+                        <td class="text-light small">24 Feb • 06:00 PM</td>
+                        <td style="min-width: 150px;">
+                            <div class="d-flex justify-content-between x-small text-muted mb-1">
+                                <span>8/10 Joined</span>
+                                <span>80%</span>
+                            </div>
+                            <div class="progress progress-dark" style="height: 4px;">
+                                <div class="progress-bar bg-primary progress-animated" style="width: 80%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-white small">₹4,000</div>
+                            <div class="text-secondary x-small">Goal: ₹5k</div>
+                        </td>
+                        <td><span class="badge-glass badge-success">Active</span></td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-outline-custom btn-sm px-3" data-bs-toggle="modal" data-bs-target="#eventDetailModal">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer d-flex align-items-center justify-content-between border-0 py-3 px-4 bg-transparent">
+            <div class="text-secondary small">
+                Showing <span class="text-white">1</span> to <span class="text-white">10</span> of 124 events
+            </div>
+            <nav>
+                <ul class="pagination pagination-midnight mb-0">
+                    <li class="page-item disabled"><a class="page-link" href="#"><i class="ti ti-chevron-left"></i></a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link" href="#"><i class="ti ti-chevron-right"></i></a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <div class="modal-header border-0 pb-0">
+               <h5 class="modal-title text-white fw-bold d-flex align-items-center">
+    Event Deep Dive
+    <div class="status-indicator-wrapper ms-3">
+        <span class="pulse-dot"></span>
+        <span class="status-text-xs">LIVE</span>
+    </div>
+</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-5">
+                        <div class="event-summary-box p-3 rounded-3 mb-3">
+                            
+                            <h4 class="text-white">Turf Booking Saturday</h4>
+                            <p class="text-muted small mb-3"><i class="ti ti-map-pin"></i> Urban Sports Arena</p>
+                            
+                            <div class="d-flex flex-column gap-2 border-top border-secondary pt-3 mt-2">
+                                <div class="small d-flex justify-content-between"><span class="text-muted">Total Revenue:</span> <span class="text-white">₹4,000</span></div>
+                                <div class="small d-flex justify-content-between"><span class="text-muted">Organizer:</span> <span class="text-white">Admin Team</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-7">
+                        <h6 class="text-white mb-3">Participants (8)</h6>
+                        <div class="participant-scroll">
+                            <div class="d-flex align-items-center justify-content-between mb-3 p-2 rounded-2 bg-dark-soft">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-sm me-2">AV</div>
+                                    <span class="text-light small">Ankit Verma</span>
+                                </div>
+                                <span class="text-success x-small fw-bold">PAID</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mb-3 p-2 rounded-2 bg-dark-soft">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle-sm me-2 bg-info-soft">NP</div>
+                                    <span class="text-light small">Neha Patel</span>
+                                </div>
+                                <span class="text-success x-small fw-bold">PAID</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-glass-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary-gradient btn-sm px-4">Download List</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
