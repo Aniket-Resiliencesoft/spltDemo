@@ -61,6 +61,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
             'latitude',
             'longitude',
             'persons_count',
+            'event_amount',
             'status',
         ]
     
@@ -73,15 +74,15 @@ class EventCreateSerializer(serializers.ModelSerializer):
         end_dt = data.get('end_date_time')
         due_date = data.get('due_pay_date')
         event_date = data.get('event_date')
-        
+        event_amount = data.get('event_amount')
         if start_dt >= end_dt:
             raise serializers.ValidationError(
                 "Start datetime must be before end datetime."
             )
         
-        if due_date and due_date < event_date:
+        if due_date and due_date > event_date:
             raise serializers.ValidationError(
-                "Due pay date cannot be before event date."
+                "Due pay date cannot be after event date."
             )
         
         if data.get('persons_count', 1) < 1:
@@ -151,3 +152,16 @@ class EventListSerializer(serializers.ModelSerializer):
             'persons_count',
             'created_by_name',
         ]
+
+
+class EventSummarySerializer(serializers.Serializer):
+    """Serializer for event summary returned by `Event.get_summary()`."""
+
+    members = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+    due_date = serializers.DateField()
+    collected_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    created_by = serializers.DictField(allow_null=True)
+    event_date = serializers.DateField()
+    start_date_time = serializers.DateTimeField()
+    end_date_time = serializers.DateTimeField()

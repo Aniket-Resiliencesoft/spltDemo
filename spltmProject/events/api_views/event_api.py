@@ -14,6 +14,7 @@ from events.serializers import (
     EventCreateSerializer,
     EventUpdateSerializer,
     EventListSerializer,
+    EventSummarySerializer,
 )
 
 
@@ -39,12 +40,16 @@ class EventListAPI(BaseAuthenticatedAPI):
         
         # Base query
         query = Event.objects.filter(is_active=True)
-        
-        # Apply filters
-        if status_filter:
-            query = query.filter(status=status_filter)
-        if category_filter:
-            query = query.filter(category=category_filter)
+
+        if request.jwt_user['role'] != "ADMIN":
+            query = query.filter(created_by=request.jwt_user['user_id'])
+
+            query = query.order_by('-created_at')
+            # Apply filters
+            if status_filter:
+                query = query.filter(status=status_filter)
+            if category_filter:
+                query = query.filter(category=category_filter)
         
         # Calculate offset
         offset = (page_no - 1) * page_size
@@ -292,4 +297,32 @@ class EventStatusUpdateAPI(BaseAuthenticatedAPI):
         return self.success_response(
             data=serializer.data,
             message="Event status updated successfully"
+        )
+
+
+class EventSummaryAPI(BaseAuthenticatedAPI):
+    """GET: Return an event summary including members, amounts and dates."""
+
+    def get(self, request, event_id):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        try:
+            event = Event.objects.get(id=event_id, is_active=True)
+        except Event.DoesNotExist:
+            return self.error_response(
+                message="Event not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        # Build summary using model helper
+        summary = event.get_summary()
+
+        # Validate/serialize output
+        serializer = EventSummarySerializer(summary)
+
+        return self.success_response(
+            data=serializer.data,
+            message="Event summary retrieved successfully"
         )

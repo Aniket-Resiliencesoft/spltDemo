@@ -51,7 +51,7 @@ class LoginAPI(APIView):
         )
 
         # Default to ADMIN if no role is assigned to keep admin UI usable
-        role_name = user_role.role.name if user_role else 'ADMIN'
+        role_name = user_role.role.name if user_role else 'User'
 
         # Step 5: Create JWT payload
         payload = {

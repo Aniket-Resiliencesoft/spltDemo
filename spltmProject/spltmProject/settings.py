@@ -83,7 +83,7 @@ WSGI_APPLICATION = 'spltmProject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'db_splitemoney',   # EXACT database name
+        'NAME': 'dbsplitemoney',   # EXACT database name
         'USER': 'root',
         'PASSWORD': '',
         'HOST': '127.0.0.1',

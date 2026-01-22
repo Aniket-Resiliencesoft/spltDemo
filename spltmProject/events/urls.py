@@ -3,6 +3,7 @@ from events.api_views.event_api import (
     EventListAPI,
     EventDetailAPI,
     EventCreateAPI,
+    EventSummaryAPI,
     EventUpdateAPI,
     EventDeleteAPI,
     EventStatusUpdateAPI,
@@ -20,4 +21,6 @@ urlpatterns = [
     
     # Status update
     path('events/<int:event_id>/status/', EventStatusUpdateAPI.as_view()),
+    # Summary
+    path('events/<int:event_id>/summary/', EventSummaryAPI.as_view()),
 ]
