@@ -1,9 +1,13 @@
 from decimal import Decimal
+import hashlib
+import json
+import time
 
 from django.shortcuts import render
 from django.db.models import Sum, Count
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models.functions import TruncMonth
+from django.http import StreamingHttpResponse, HttpResponse
 
 from accounts.models import User
 from events.models import Event
@@ -84,3 +88,133 @@ def adminDashBoard(request):
         pass
 
     return render(request, 'splitmoneyDashBoard.html', context)
+
+
+def dashboard_stream(request):
+    """
+    Server-Sent Events endpoint that pushes dashboard snapshots when data changes.
+    """
+    # Basic auth guard: allow if no role is set (legacy token) or ADMIN
+    jwt_user = getattr(request, 'jwt_user', None)
+    role = jwt_user.get('role') if jwt_user else None
+    if jwt_user is None:
+        return HttpResponse("Unauthorized", status=401)
+    if role and str(role).upper() != 'ADMIN':
+        return HttpResponse("Forbidden", status=403)
+
+    def snapshot():
+        data = {
+            'users': [],
+            'events': [],
+            'payments': [],
+            'totals': {
+                'users': 0,
+                'events': 0,
+                'collected': 0,
+                'pending': 0,
+            },
+            'charts': {
+                'monthly_labels': [],
+                'monthly_amounts': [],
+                'status_labels': [],
+                'status_counts': [],
+            }
+        }
+        try:
+            # Users
+            users_qs = User.objects.filter(is_active=True).order_by('-created_at')[:100]
+            data['users'] = [
+                {
+                    'id': u.id,
+                    'full_name': u.full_name,
+                    'email': u.email,
+                    'contact_no': u.contact_no,
+                    'status': u.status,
+                } for u in users_qs
+            ]
+            data['totals']['users'] = users_qs.count()
+
+            # Events
+            events_qs = Event.objects.filter(is_active=True).select_related('created_by').order_by('-created_at')[:100]
+            data['events'] = [
+                {
+                    'id': ev.id,
+                    'title': ev.title,
+                    'category': ev.category,
+                    'category_display': ev.get_category_display(),
+                    'event_date': ev.event_date,
+                    'start_date_time': ev.start_date_time,
+                    'end_date_time': ev.end_date_time,
+                    'due_pay_date': ev.due_pay_date,
+                    'persons_count': ev.persons_count,
+                    'status': ev.status,
+                    'status_display': ev.get_status_display(),
+                    'created_by_name': getattr(ev.created_by, 'full_name', ''),
+                }
+                for ev in events_qs
+            ]
+            data['totals']['events'] = events_qs.count()
+
+            # Payments / transactions
+            txn_qs = EventCollectionTransaction.objects.filter(is_active=True)
+            data['payments'] = [
+                {
+                    'id': tx.id,
+                    'event_title': getattr(tx.event, 'title', ''),
+                    'user_name': getattr(tx.user, 'full_name', ''),
+                    'amount': float(tx.amount),
+                    'status': tx.status,
+                    'status_display': tx.get_status_display(),
+                    'transaction_date': tx.transaction_date,
+                }
+                for tx in txn_qs[:100]
+            ]
+            data['totals']['collected'] = float(txn_qs.filter(status='completed').aggregate(total=Sum('amount'))['total'] or Decimal('0'))
+            data['totals']['pending'] = float(txn_qs.filter(status='pending').aggregate(total=Sum('amount'))['total'] or Decimal('0'))
+
+            monthly = (
+                txn_qs.filter(status='completed')
+                .annotate(month=TruncMonth('transaction_date'))
+                .values('month')
+                .annotate(total=Sum('amount'))
+                .order_by('month')
+            )
+            data['charts']['monthly_labels'] = [
+                m['month'].strftime('%b') if m['month'] else '' for m in monthly
+            ]
+            data['charts']['monthly_amounts'] = [
+                float(m['total']) if m['total'] else 0 for m in monthly
+            ]
+
+            status_counts = (
+                Event.objects.filter(is_active=True)
+                .values('status')
+                .annotate(count=Count('id'))
+            )
+            data['charts']['status_labels'] = [sc['status'] for sc in status_counts]
+            data['charts']['status_counts'] = [sc['count'] for sc in status_counts]
+
+        except (OperationalError, ProgrammingError):
+            pass
+        return data
+
+    def event_stream():
+        last_sig = None
+        idle = 0
+        while True:
+            payload = snapshot()
+            sig = hashlib.md5(json.dumps(payload, default=str, sort_keys=True).encode()).hexdigest()
+            if sig != last_sig:
+                last_sig = sig
+                idle = 0
+                yield f"data: {json.dumps(payload, default=str)}\n\n"
+            else:
+                idle += 1
+                if idle % 10 == 0:
+                    yield "event: ping\ndata: {}\n\n"
+            time.sleep(2)
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response

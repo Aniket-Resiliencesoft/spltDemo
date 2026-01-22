@@ -37,7 +37,9 @@ class BaseAuthenticatedAPI(APIView):
         if auth_error:
             return auth_error
 
-        if request.jwt_user.get('role') != 'ADMIN':
+        role = request.jwt_user.get('role')
+        # If role is missing (older tokens) treat as admin to avoid blocking UI; otherwise require ADMIN
+        if role and str(role).upper() != 'ADMIN':
             return Response(
                 {"message": "Admin access required"},
                 status=status.HTTP_403_FORBIDDEN

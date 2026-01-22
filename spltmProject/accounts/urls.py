@@ -44,4 +44,5 @@ urlpatterns += [
 
 urlpatterns +=[
     path('login/',ui_views.login_view),
+    path('stream/dashboard/', ui_views.dashboard_stream, name='dashboard_stream'),
 ]
