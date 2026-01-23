@@ -15,15 +15,30 @@ from accounts.models import User
 from events.models import Event
 from payments.models import EventCollectionTransaction
 from common.decorators import login_required_view
+from common.utils.jwt_utils import decode_jwt_token
 
 def login_view(request):
     """
     Renders login page.
-    If user is already logged in, redirects to dashboard.
+    If user is already logged in with a VALID token, redirects to dashboard.
+    If token is invalid/expired, clears it and shows login page.
     """
     token = request.COOKIES.get('access_token')
+    
     if token:
-        return redirect('/dashboard/')
+        # Validate token before redirecting
+        try:
+            payload = decode_jwt_token(token)
+            # Token is valid, redirect to dashboard
+            return redirect('/dashboard/')
+        except Exception as e:
+            # Token is invalid or expired
+            # Clear the invalid token and show login page
+            response = render(request, 'auth/login.html')
+            response.delete_cookie('access_token')
+            return response
+    
+    # No token, show login page
     return render(request, 'auth/login.html')
 
 

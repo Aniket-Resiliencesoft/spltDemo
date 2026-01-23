@@ -1,78 +1,374 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-<!-- [Head] start -->
 <head>
   <title>Login</title>
-
-  <!-- Meta -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
-  <!-- Favicon -->
+  
   <link rel="icon" href="{% static 'assets/images/favicon.svg' %}" type="image/x-icon">
-
-  <!-- Fonts -->
   <link rel="stylesheet" href="{% static 'assets/fonts/inter/inter.css' %}">
   <link rel="stylesheet" href="{% static 'assets/fonts/tabler-icons.min.css' %}">
   <link rel="stylesheet" href="{% static 'assets/fonts/feather.css' %}">
   <link rel="stylesheet" href="{% static 'assets/fonts/fontawesome.css' %}">
   <link rel="stylesheet" href="{% static 'assets/fonts/material.css' %}">
-
-  <!-- CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
   <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .split-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Left Side - Animation */
+    .left-side {
+      flex: 1;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .left-side::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: moveBackground 20s linear infinite;
+    }
+
+    @keyframes moveBackground {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+
+    .animation-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      color: white;
+      padding: 40px;
+    }
+
+    .logo-section {
+      margin-bottom: 40px;
+    }
+
+    .logo-section h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      animation: fadeInDown 1s ease;
+    }
+
+    .logo-section p {
+      font-size: 18px;
+      opacity: 0.9;
+      animation: fadeInDown 1s ease 0.2s backwards;
+    }
+
+    .features-animation {
+      margin-top: 60px;
+    }
+
+    .feature-item {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      margin: 20px 0;
+      transform: translateX(-100px);
+      opacity: 0;
+      animation: slideInLeft 0.8s ease forwards;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .feature-item:nth-child(1) { animation-delay: 0.4s; }
+    .feature-item:nth-child(2) { animation-delay: 0.6s; }
+    .feature-item:nth-child(3) { animation-delay: 0.8s; }
+
+    .feature-item i {
+      font-size: 40px;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .feature-item h3 {
+      font-size: 22px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .feature-item p {
+      font-size: 14px;
+      opacity: 0.9;
+      line-height: 1.6;
+    }
+
+    .floating-coins {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+
+    .coin {
+      position: absolute;
+      font-size: 30px;
+      animation: float 6s ease-in-out infinite;
+      opacity: 0.3;
+    }
+
+    .coin:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+    .coin:nth-child(2) { left: 80%; top: 30%; animation-delay: 1s; }
+    .coin:nth-child(3) { left: 20%; top: 70%; animation-delay: 2s; }
+    .coin:nth-child(4) { left: 70%; top: 60%; animation-delay: 3s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    @keyframes slideInLeft {
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Right Side - Login Form */
+    .right-side {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      padding: 40px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 450px;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .login-header h2 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .login-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .login-form {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-top: 10px;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    /* Loader */
+    .loader-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loader-track {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 968px) {
+      .split-container {
+        flex-direction: column;
+      }
+
+      .left-side {
+        display: none;
+      }
+
+      .right-side {
+        flex: 1;
+      }
+    }
+  </style>
 </head>
-<!-- [Head] end -->
 
-<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">
-
+<body>
   <!-- Pre Loader -->
   <div class="loader-bg">
-    <div class="loader-track">
-      <div class="loader-fill"></div>
-    </div>
+    <div class="loader-track"></div>
   </div>
 
-  <!-- Auth Page -->
-  <div class="auth-main">
-    <div class="auth-wrapper v1">
-      <div class="auth-form">
-        <div class="card my-5">
-          <div class="card-body">
+  <div class="split-container">
+    <!-- Left Side - Animation -->
+    <div class="left-side">
+      <div class="floating-coins">
+        <div class="coin">💰</div>
+        <div class="coin">💵</div>
+        <div class="coin">💳</div>
+        <div class="coin">💸</div>
+      </div>
 
-            <div class="mt-4">
-                <form id="loginForm">
-                {% csrf_token %}
+      <div class="animation-content">
+        <div class="logo-section">
+          <h1>Split Money</h1>
+          <p>Manage and split expenses effortlessly</p>
+        </div>
 
-                <div class="form-group mb-3">
-                    <input type="email" name="email" class="form-control" placeholder="Email Address">
-                </div>
-
-                <div class="form-group mb-3">
-                    <input type="password" name="password" class="form-control" placeholder="Password">
-                </div>
-
-                <div class="d-flex mt-1 justify-content-between align-items-center">
-                    <div class="form-check">
-                    <input class="form-check-input input-primary" type="checkbox" id="remember">
-                    <label class="form-check-label text-muted" for="remember">Remember me?</label>
-                    </div>
-                    <a href="#" class="text-secondary f-w-400">Forgot Password?</a>
-                </div>
-
-                <div class="d-grid mt-4">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </div>
-                </form>
-            </div>
-            <div class="d-flex justify-content-between align-items-end mt-4">
-              <h6 class="f-w-500 mb-0">Don't have an Account?</h6>
-              <a href="#" class="link-primary">Create Account</a>
-            </div>
-
+        <div class="features-animation">
+          <div class="feature-item">
+            <i class="ti ti-wallet"></i>
+            <h3>Track Expenses</h3>
+            <p>Keep track of all your shared expenses in one place</p>
           </div>
+
+          <div class="feature-item">
+            <i class="ti ti-users"></i>
+            <h3>Split Bills</h3>
+            <p>Easily split bills with friends and family</p>
+          </div>
+
+          <div class="feature-item">
+            <i class="ti ti-chart-line"></i>
+            <h3>Financial Insights</h3>
+            <p>Get detailed insights into your spending patterns</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Login Form -->
+    <div class="right-side">
+      <div class="login-container">
+        <div class="login-header">
+          <h2>Welcome Back</h2>
+          <p>Please login to your account</p>
+        </div>
+
+        <div class="login-form">
+          <form id="loginForm">
+            {% csrf_token %}
+
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" name="email" id="email" placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" name="password" id="password" placeholder="Enter your password" required>
+            </div>
+
+            <button type="submit" class="btn-login">Login</button>
+          </form>
         </div>
       </div>
     </div>
@@ -85,107 +381,103 @@
   <script src="{% static 'assets/js/plugins/feather.min.js' %}"></script>
   <script src="{% static 'assets/js/fonts/custom-font.js' %}"></script>
   <script src="{% static 'assets/js/pcoded.js' %}"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
-        crossorigin="anonymous"></script>
+  <script>
+    // Hide loader after page loads
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        document.querySelector('.loader-bg').style.display = 'none';
+      }, 500);
+    });
 
-</body>
-</html>
-<script>
-$(document).ready(function () {
-    
-    // Check if user is already logged in
-    const token = getCookie('access_token') || localStorage.getItem('access_token');
-    if (token) {
-        // User is already logged in, redirect to dashboard
+    $(document).ready(function () {
+      // Check if user is already logged in
+      const token = getCookie('access_token') || localStorage.getItem('access_token');
+      if (token) {
         window.location.href = "{% url 'dashboard' %}";
         return;
-    }
+      }
 
-    $("#loginForm").on("submit", function (e) {
-        e.preventDefault(); // stop form submit
+      $("#loginForm").on("submit", function (e) {
+        e.preventDefault();
 
         const email = $("input[name='email']").val();
         const password = $("input[name='password']").val();
-
+        const appKey = 1;  
         if (!email || !password) {
-            alert("Email and password are required");
-            return;
+          alert("Email and password are required");
+          return;
         }
 
         $.ajax({
-            url: "/api/auth/login/",
-            type: "POST",
-            contentType: "application/json",
-            headers: {
-                "X-CSRFToken": getCSRFToken()
-            },
-            data: JSON.stringify({
-                email: email,
-                password: password
-            }),
-            success: function (response) {
-                 setCookie("access_token", response.access_token, 1);
-                 setCookie("user_role", response.user.role, 1);
-                 setCookie("user_name", response.user.full_name, 1);
-                 setCookie("user_email", response.user.email, 1);
-                localStorage.setItem("access_token", response.access_token);
-                localStorage.setItem("user_role", response.user.role);
-                localStorage.setItem("user_name", response.user.full_name);
-                localStorage.setItem("user_email", response.user.email);
-                if (response.user.role === "ADMIN") {
-                    window.location.href = "{% url 'dashboard' %}";
-                } else {
-                    window.location.href = "{% url 'dashboard' %}";
-                }
-            },
-            error: function (xhr) {
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    alert(xhr.responseJSON.message);
-                } else {
-                    alert("Login failed");
-                }
+          url: "/api/auth/login/",
+          type: "POST",
+          contentType: "application/json",
+          headers: {
+            "X-CSRFToken": getCSRFToken()
+          },
+          data: JSON.stringify({
+            email: email,
+            password: password,
+            appKey :appKey
+          }),
+          success: function (response) {
+            setCookie("access_token", response.access_token, 1);
+            setCookie("user_role", response.user.role, 1);
+            setCookie("user_name", response.user.full_name, 1);
+            setCookie("user_email", response.user.email, 1);
+            localStorage.setItem("access_token", response.access_token);
+            localStorage.setItem("user_role", response.user.role);
+            localStorage.setItem("user_name", response.user.full_name);
+            localStorage.setItem("user_email", response.user.email);
+            window.location.href = "{% url 'dashboard' %}";
+          },
+          error: function (xhr) {
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+              alert(xhr.responseJSON.message);
+            } else {
+              alert("Login failed");
             }
+          }
         });
+      });
     });
 
-});
-
-// CSRF helper
-function getCSRFToken() {
-    let cookieValue = null;
-    let cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
+    function getCSRFToken() {
+      let cookieValue = null;
+      let cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
         let cookie = cookies[i].trim();
         if (cookie.startsWith('csrftoken=')) {
-            cookieValue = cookie.substring('csrftoken='.length);
-            break;
+          cookieValue = cookie.substring('csrftoken='.length);
+          break;
         }
+      }
+      return cookieValue;
     }
-    return cookieValue;
-}
 
-function setCookie(name, value, hours) {
-    let expires = "";
-    if (hours) {
+    function setCookie(name, value, hours) {
+      let expires = "";
+      if (hours) {
         const date = new Date();
         date.setTime(date.getTime() + (hours * 60 * 60 * 1000));
         expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
     }
-    document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
-}
 
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
+    function getCookie(name) {
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
         let c = ca[i].trim();
         if (c.indexOf(nameEQ) === 0) {
-            return decodeURIComponent(c.substring(nameEQ.length));
+          return decodeURIComponent(c.substring(nameEQ.length));
         }
+      }
+      return null;
     }
-    return null;
-}
-
-</script>
+  </script>
+</body>
+</html>

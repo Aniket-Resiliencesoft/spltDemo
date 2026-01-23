@@ -3,7 +3,9 @@ from common.utils.jwt_utils import decode_jwt_token
 
 EXEMPT_URLS = (
     '/api/auth/login/',
-    '/api/users/register/',
+    '/api/users/create/',
+    '/api/auth/generateOTP',
+    '/api/auth/verifyOTP',
 )
 
 class JWTAuthenticationMiddleware:
@@ -17,7 +19,7 @@ class JWTAuthenticationMiddleware:
         # ✅ 1. If NOT an API request → skip JWT
         if not path.startswith('/api/'):
             return self.get_response(request)
-
+        print("API Request Path:", path)
         # ✅ 2. Allow public API URLs WITHOUT JWT
         if path.startswith(EXEMPT_URLS):
             return self.get_response(request)
@@ -53,9 +55,13 @@ class JWTAuthenticationMiddleware:
             payload = decode_jwt_token(token)
             request.jwt_user = payload
         except Exception as ex:
-            return JsonResponse(
+            # Create response to remove invalid token from cookie
+            response = JsonResponse(
                 {"message": "Invalid or expired token", "detail": str(ex)},
                 status=401
             )
+            # 🔴 IMPORTANT: Delete the invalid token from cookies
+            response.delete_cookie('access_token')
+            return response
 
         return self.get_response(request)

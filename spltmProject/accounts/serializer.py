@@ -99,4 +99,33 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         trim_whitespace=False
     )
+    appKey = serializers.IntegerField(required=False, default=0)
+
+
+class OTPGenerateSerializer(serializers.Serializer):
+    """
+    Serializer for OTP generation.
+    Accepts email and password to generate OTP.
+    """
+
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(
+        required=True,
+        write_only=True,
+        trim_whitespace=False
+    )
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    """
+    Serializer for OTP verification.
+    Accepts user_id and OTP to verify and generate JWT token.
+    """
+
+    user_id = serializers.IntegerField(required=True)
+    otp = serializers.CharField(
+        required=True,
+        max_length=6,
+        min_length=6
+    )
 

@@ -1,0 +1,792 @@
+{
+  "info": {
+    "_postman_id": "splitmoney-api-2026",
+    "name": "SplitMoney API Collection",
+    "description": "Complete API collection for SplitMoney with User, Event, and Payment management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\",\n  \"appKey\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login", ""]
+            },
+            "description": "Admin login - returns JWT token directly. Set appKey=1 for admin-only authentication.",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                    "    pm.test(\"Token saved to environment\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "Non-Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login", ""]
+            },
+            "description": "Non-admin login - generates OTP. Returns user_id and email. Next step: verify OTP."
+          },
+          "response": []
+        },
+        {
+          "name": "OTP Generate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/otp/generate/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "otp", "generate", ""]
+            },
+            "description": "Generate OTP for non-admin user. Validates email and password, generates 6-digit OTP valid for 10 minutes."
+          },
+          "response": []
+        },
+        {
+          "name": "OTP Verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 2,\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/otp/verify/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "otp", "verify", ""]
+            },
+            "description": "Verify OTP and get JWT token. Accepts user_id and OTP (6 digits). Returns access_token if OTP is valid and not expired.",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                    "    pm.test(\"Token saved to environment\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/?pageNo=1&pageSize=10&search=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", ""],
+              "query": [
+                {
+                  "key": "pageNo",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Retrieve paginated list of all users with optional search filter"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1", ""]
+            },
+            "description": "Get detailed information of a specific user by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"contact_no\": \"9876543210\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/create/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "create", ""]
+            },
+            "description": "Create a new user account"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Doe Updated\",\n  \"contact_no\": \"9876543211\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/1/update/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1", "update", ""]
+            },
+            "description": "Update user information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/users/1/delete/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "1", "delete", ""]
+            },
+            "description": "Delete (soft delete) a user account"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Role to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"role_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/assign-role/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "assign-role", ""]
+            },
+            "description": "Assign a role to a specific user"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Role Management",
+      "item": [
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/roles/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "roles", ""]
+            },
+            "description": "Retrieve all available roles"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/roles/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "roles", "1", ""]
+            },
+            "description": "Get details of a specific role"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager\",\n  \"description\": \"Manager role for event management\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/roles/create/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "roles", "create", ""]
+            },
+            "description": "Create a new role"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager Updated\",\n  \"description\": \"Updated manager role\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/roles/1/update/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "roles", "1", "update", ""]
+            },
+            "description": "Update role information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/roles/1/delete/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "roles", "1", "delete", ""]
+            },
+            "description": "Delete a role"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Event Management",
+      "item": [
+        {
+          "name": "Get All Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/?pageNo=1&pageSize=10&fromDate=&toDate=&status=&category=&search=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", ""],
+              "query": [
+                {
+                  "key": "pageNo",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "fromDate",
+                  "value": ""
+                },
+                {
+                  "key": "toDate",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "category",
+                  "value": ""
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Retrieve paginated list of events with optional filters (date range, status, category, search)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Event by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", ""]
+            },
+            "description": "Get detailed information of a specific event"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Team Dinner\",\n  \"description\": \"Team dinner at downtown restaurant\",\n  \"event_date\": \"2025-02-15\",\n  \"location\": \"Downtown Restaurant\",\n  \"category\": \"Dinner\",\n  \"budget\": 5000.00,\n  \"status\": \"planned\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/events/create/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "create", ""]
+            },
+            "description": "Create a new event"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Team Dinner Updated\",\n  \"description\": \"Team dinner at new location\",\n  \"budget\": 6000.00,\n  \"status\": \"planned\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/events/1/update/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "update", ""]
+            },
+            "description": "Update event information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/1/delete/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "delete", ""]
+            },
+            "description": "Delete an event"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Event Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/events/1/status/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "status", ""]
+            },
+            "description": "Update the status of an event (planned, ongoing, completed, cancelled)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Event Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/1/summary/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "summary", ""]
+            },
+            "description": "Get summary information of an event including total collection and pending amounts"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment/Transaction Management",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transactions/?pageNo=1&pageSize=10&fromDate=&toDate=&status=&search=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", ""],
+              "query": [
+                {
+                  "key": "pageNo",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "fromDate",
+                  "value": ""
+                },
+                {
+                  "key": "toDate",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Retrieve paginated list of transactions with optional filters (date range, status, search)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transactions/1/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", "1", ""]
+            },
+            "description": "Get detailed information of a specific transaction"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": 1,\n  \"user_id\": 2,\n  \"amount\": 1500.00,\n  \"status\": \"pending\",\n  \"payment_method\": \"cash\",\n  \"transaction_date\": \"2025-02-15\",\n  \"notes\": \"Payment for team dinner\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/transactions/create/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", "create", ""]
+            },
+            "description": "Create a new transaction/payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Transaction",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1600.00,\n  \"status\": \"completed\",\n  \"notes\": \"Payment completed for team dinner\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/transactions/1/update/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", "1", "update", ""]
+            },
+            "description": "Update transaction information"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/transactions/1/delete/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "transactions", "1", "delete", ""]
+            },
+            "description": "Delete a transaction"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Event Transaction Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/1/summary/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "summary", ""]
+            },
+            "description": "Get transaction summary for a specific event"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/events/1/users/2/history/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "events", "1", "users", "2", "history", ""]
+            },
+            "description": "Get transaction history for a specific user in a specific event"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
