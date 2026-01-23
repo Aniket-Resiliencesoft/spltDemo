@@ -5,38 +5,91 @@
 <link rel="stylesheet" href="/static/assets/css/pagination.css">
 
 <style>
+.surface {
+  background: var(--surface-bg);
+  border-radius: 16px;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+  border: 1px solid var(--surface-border);
+  color: var(--surface-text);
+}
+
 .filter-card {
   border-radius: 14px;
-  border: 1px solid #eef2f7;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-bg);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
 .event-row {
-  border: 1px solid #eef2f7;
+  border: 1px solid var(--surface-border);
   border-radius: 14px;
   padding: 16px 18px;
-  background: #fff;
+  background: var(--surface-bg);
   transition: all .2s ease;
   cursor: pointer;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  color: var(--surface-text);
 }
 
 .event-row:hover {
-  box-shadow: 0 12px 25px rgba(0,0,0,.06);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
   transform: translateY(-2px);
 }
 
 .event-title {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 16px;
+  color: var(--surface-text);
 }
 
 .event-meta {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--muted-text);
 }
 
-.badge-category {
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border: 1px solid transparent;
+}
+
+.chip-muted {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.chip-info {
   background: #eef2ff;
-  color: #4f46e5;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+
+.chip-status {
+  background: #f0f9ff;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.btn-filter-primary,
+.btn-filter-reset {
+  min-width: 92px;
+  height: 40px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.btn-filter-reset {
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
 }
 </style>
 
@@ -81,9 +134,14 @@
                  placeholder="Search by title">
         </div>
 
-        <div class="col-md-2 d-grid">
-          <button id="apply-filter" class="btn btn-primary">
+        <div class="col-md-1 d-grid">
+          <button id="apply-filter" class="btn btn-primary btn-filter-primary">
             <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+        <div class="col-md-1 d-grid">
+          <button id="reset-filter" class="btn btn-filter-reset">
+            Reset
           </button>
         </div>
       </div>
@@ -91,7 +149,7 @@
   </div>
 
   <!-- EVENT LIST -->
-  <div id="events-container">
+  <div id="events-container" class="surface p-3">
     <div id="events-list" class="d-grid gap-3"></div>
 
     <!-- PAGINATION INFO -->
@@ -159,8 +217,18 @@ async function loadEvents() {
   try {
     const qs = new URLSearchParams(params).toString();
     const url = `/api/events/?${qs}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const response = await fetch(url, {
+      headers: authHeaders({ 'Accept': 'application/json' }),
+      credentials: 'same-origin'
+    });
+    if (!response.ok) {
+      let msg = `HTTP ${response.status}`;
+      try {
+        const err = await response.json();
+        msg = err.message || err.Message || msg;
+      } catch (_) {}
+      throw new Error(msg);
+    }
     const resp = await response.json();
     const items = resp.data || resp.Data || [];
     const totalPages = resp.TotalPages || 1;
@@ -174,6 +242,7 @@ async function loadEvents() {
     });
   } catch (err) {
     console.error(err);
+    document.getElementById('events-list').innerHTML = `<div class="text-danger p-3">Error loading events: ${err.message}</div>`;
   }
 }
 
@@ -197,13 +266,13 @@ function renderEventList(events) {
           <div class="event-meta">📅 ${ev.event_date || ''}</div>
         </div>
         <div class="col-md-2">
-          <span class="badge badge-category">${ev.category || ''}</span>
+          <span class="chip chip-info"><i class="fas fa-tag"></i> ${ev.category || ''}</span>
         </div>
         <div class="col-md-2">
-          <span class="badge bg-light text-dark">${ev.status || ''}</span>
+          <span class="chip chip-status"><i class="fas fa-circle"></i> ${ev.status || ''}</span>
         </div>
-        <div class="col-md-2 text-muted">👥 ${ev.persons_count || 0}</div>
-        <div class="col-md-2 text-muted">👤 ${ev.created_by_name || ''}</div>
+        <div class="col-md-2 text-muted"><i class="fas fa-users"></i> ${ev.persons_count || 0}</div>
+        <div class="col-md-2 text-muted"><i class="fas fa-user"></i> ${ev.created_by_name || ''}</div>
         <div class="col-md-1 text-end">
           <button class="btn btn-sm btn-outline-primary view-summary">View</button>
         </div>
@@ -218,7 +287,10 @@ function renderEventList(events) {
       e.stopPropagation();
       const eventId = btn.closest('.event-row').dataset.id;
       try {
-        const response = await fetch(`/api/events/${eventId}/summary/`);
+        const response = await fetch(`/api/events/${eventId}/summary/`, {
+          headers: authHeaders({ 'Accept': 'application/json' }),
+          credentials: 'same-origin'
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const resp = await response.json();
         const summary = resp.data || resp.Data || {};
@@ -235,7 +307,10 @@ function renderEventList(events) {
       if (e.target.closest('.view-summary')) return; // Skip if clicked on button
       const eventId = row.dataset.id;
       try {
-        const response = await fetch(`/api/events/${eventId}/summary/`);
+        const response = await fetch(`/api/events/${eventId}/summary/`, {
+          headers: authHeaders({ 'Accept': 'application/json' }),
+          credentials: 'same-origin'
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const resp = await response.json();
         const summary = resp.data || resp.Data || {};
@@ -274,6 +349,15 @@ document.addEventListener('DOMContentLoaded', function () {
   loadEvents();
 
   document.getElementById('apply-filter').addEventListener('click', () => {
+    currentPage = 1;
+    loadEvents();
+  });
+
+  document.getElementById('reset-filter').addEventListener('click', () => {
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-search').value = '';
     currentPage = 1;
     loadEvents();
   });

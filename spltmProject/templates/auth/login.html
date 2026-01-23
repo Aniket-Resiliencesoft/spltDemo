@@ -393,7 +393,18 @@
 
     $(document).ready(function () {
       // Check if user is already logged in
-      const token = getCookie('access_token') || localStorage.getItem('access_token');
+      const cookieToken = getCookie('access_token');
+      const localToken = localStorage.getItem('access_token');
+
+      // If cookie missing but local storage has a token, clear stale local storage to avoid redirect loop
+      if (!cookieToken && localToken) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('user_name');
+        localStorage.removeItem('user_email');
+      }
+
+      const token = cookieToken || localToken;
       if (token) {
         window.location.href = "{% url 'dashboard' %}";
         return;

@@ -40,8 +40,9 @@ function showConfirm(message = "Are you sure?") {
 async function handleResponse(response) {
     const result = await response.json();
 
-    if (!result.success) {
-        showAlert(false, result.message || "Operation failed");
+    const isSuccess = result.success ?? result.IsSuccess ?? result.is_success;
+    if (!isSuccess) {
+        showAlert(false, result.message || result.Message || "Operation failed");
         throw result;
     }
 
@@ -49,11 +50,40 @@ async function handleResponse(response) {
 }
 
 /* ==============================
+   AUTH HELPERS
+   ============================== */
+
+function getAuthToken() {
+    const local = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('access_token')
+        : null;
+    if (local) return local;
+
+    // fallback to cookie
+    if (typeof document !== 'undefined' && document.cookie) {
+        const match = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('access_token='));
+        if (match) return decodeURIComponent(match.split('=')[1]);
+    }
+    return null;
+}
+
+function authHeaders(extra = {}) {
+    const token = getAuthToken();
+    const headers = { ...extra };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+}
+
+/* ==============================
    GET APIs
    ============================== */
 
 async function apiGet(url) {
-    const response = await fetch(url, { method: "GET" });
+    const response = await fetch(url, {
+        method: "GET",
+        headers: authHeaders(),
+        credentials: "same-origin",
+    });
     return handleResponse(response);
 }
 
@@ -80,7 +110,8 @@ async function apiGetList(url, params = {}) {
 async function apiPost(url, data) {
     const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        credentials: "same-origin",
         body: JSON.stringify(data)
     });
 
@@ -92,6 +123,8 @@ async function apiPost(url, data) {
 async function apiPostWithImage(url, formData) {
     const response = await fetch(url, {
         method: "POST",
+        headers: authHeaders(),
+        credentials: "same-origin",
         body: formData
     });
 
@@ -107,7 +140,8 @@ async function apiPostWithImage(url, formData) {
 async function apiPut(url, id, data) {
     const response = await fetch(`${url}/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        credentials: "same-origin",
         body: JSON.stringify(data)
     });
 
@@ -119,6 +153,8 @@ async function apiPut(url, id, data) {
 async function apiPutWithImage(url, id, formData) {
     const response = await fetch(`${url}/${id}`, {
         method: "PUT",
+        headers: authHeaders(),
+        credentials: "same-origin",
         body: formData
     });
 
@@ -135,7 +171,9 @@ async function apiDelete(url, id, confirmMessage = "Are you sure you want to del
     if (!showConfirm(confirmMessage)) return null;
 
     const response = await fetch(`${url}/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: authHeaders(),
+        credentials: "same-origin",
     });
 
     const result = await handleResponse(response);

@@ -159,6 +159,41 @@ class UserDeleteAPI(APIView):
         )
 
 
+class UserStatusAPI(BaseAuthenticatedAPI):
+    """
+    PATCH: Update a user's status/is_active.
+    """
+    def patch(self, request, user_id):
+        error = self.require_admin_role(request)
+        if error:
+            return error
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        status_val = request.data.get('status')
+        is_active = request.data.get('is_active')
+
+        if status_val is None and is_active is None:
+            return Response({"message": "status or is_active is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        updates = []
+        if status_val is not None:
+            try:
+                user.status = int(status_val)
+                updates.append('status')
+            except ValueError:
+                return Response({"message": "status must be integer"}, status=status.HTTP_400_BAD_REQUEST)
+        if is_active is not None:
+            user.is_active = bool(is_active) if not isinstance(is_active, bool) else is_active
+            updates.append('is_active')
+
+        user.save(update_fields=updates or None)
+        return Response({"message": "User status updated"}, status=status.HTTP_200_OK)
+
+
 class AssignUserRoleAPI(BaseAuthenticatedAPI):
     """
     POST:
