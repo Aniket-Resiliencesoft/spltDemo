@@ -46,3 +46,9 @@ urlpatterns +=[
     path('login/',ui_views.login_view),
     path('stream/dashboard/', ui_views.dashboard_stream, name='dashboard_stream'),
 ]
+
+# UI pages
+urlpatterns += [
+    path('users', ui_views.user_list_view, name='users'),
+    path('users/create-ui/', ui_views.user_create_view, name='user_create_ui'),
+]

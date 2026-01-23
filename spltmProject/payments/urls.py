@@ -8,6 +8,7 @@ from payments.api_views.transaction_api import (
     EventTransactionSummaryAPI,
     UserTransactionHistoryAPI,
 )
+from . import ui_views
 
 urlpatterns = [
     # List and Create
@@ -22,4 +23,6 @@ urlpatterns = [
     # Summary and History
     path('api/events/<int:event_id>/summary/', EventTransactionSummaryAPI.as_view()),
     path('api/events/<int:event_id>/users/<int:user_id>/history/', UserTransactionHistoryAPI.as_view()),
+    # UI payments list page
+    path('list/payment/', ui_views.list_payment_page, name='list_payments'),
 ]

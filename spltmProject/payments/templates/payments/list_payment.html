@@ -1,0 +1,255 @@
+{% extends "adminDashBoard.html" %}
+
+{% block content %}
+
+<style>
+.filter-card {
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+}
+
+.tx-row {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 14px 18px;
+  background: #fff;
+  transition: all .2s ease;
+}
+
+.tx-row:hover {
+  box-shadow: 0 10px 22px rgba(0,0,0,.06);
+  transform: translateY(-2px);
+}
+
+.tx-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tx-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.badge-type {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Transactions</h3>
+  </div>
+
+  <!-- =====================
+       FILTER BAR
+  ====================== -->
+  <div class="card filter-card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+
+        <div class="col-md-3">
+          <label class="form-label">Event</label>
+          <input type="text" id="filter-event" class="form-control"
+                 placeholder="Event title">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">User</label>
+          <input type="text" id="filter-user" class="form-control"
+                 placeholder="User name">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Type</label>
+          <select id="filter-type" class="form-select">
+            <option value="">All</option>
+            <option value="contribution">Contribution</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select id="filter-status" class="form-select">
+            <option value="">All</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button id="apply-filter" class="btn btn-primary">
+            <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================
+       TRANSACTION LIST
+  ====================== -->
+  <div id="transactions-container">
+
+    <div id="transactions-list" class="d-grid gap-3"></div>
+
+    <!-- PAGINATION -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <div class="text-muted" id="pagination-info"></div>
+      <div>
+        <button id="prev-page" class="btn btn-outline-secondary btn-sm">Prev</button>
+        <button id="next-page" class="btn btn-outline-secondary btn-sm ms-2">Next</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* =====================
+   CONFIG
+===================== */
+const URLS = {
+  LIST: '/api/transactions/'
+};
+
+let currentPage = 1;
+const pageSize = 10;
+
+/* =====================
+   FETCH UTIL
+===================== */
+async function fetchJSON(url, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const finalUrl = qs ? `${url}?${qs}` : url;
+
+  const res = await fetch(finalUrl, {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'same-origin'
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+/* =====================
+   DATA FUNCTIONS
+===================== */
+async function fetchTransactions() {
+  const resp = await fetchJSON(URLS.LIST, {
+    pageNo: currentPage,
+    pageSize,
+    event: $('#filter-event').val(),
+    user: $('#filter-user').val(),
+    transaction_type: $('#filter-type').val(),
+    status: $('#filter-status').val()
+  });
+
+  return resp?.Data ?? [];
+}
+
+/* =====================
+   RENDER FUNCTIONS
+===================== */
+function renderTransactionList(transactions) {
+  const $list = $('#transactions-list').empty();
+
+  if (!transactions.length) {
+    $list.html('<div class="text-muted p-4">No transactions found</div>');
+    return;
+  }
+
+  transactions.forEach(tx => {
+    $list.append(`
+      <div class="tx-row">
+        <div class="row align-items-center">
+
+          <div class="col-md-3">
+            <div class="tx-title">${tx.event_title}</div>
+            <div class="tx-meta">📅 ${formatDate(tx.transaction_date)}</div>
+          </div>
+
+          <div class="col-md-2">
+            👤 ${tx.user_name}
+          </div>
+
+          <div class="col-md-2">
+            <span class="badge badge-type">
+              ${tx.transaction_type_display}
+            </span>
+          </div>
+
+          <div class="col-md-2">
+            <span class="badge bg-light text-dark">
+              ${tx.status_display}
+            </span>
+          </div>
+
+          <div class="col-md-2 fw-semibold">
+            ₹ ${tx.amount}
+          </div>
+
+          <div class="col-md-1 text-end text-muted">
+            #${tx.id}
+          </div>
+
+        </div>
+      </div>
+    `);
+  });
+
+  $('#pagination-info').text(`Page ${currentPage}`);
+}
+
+/* =====================
+   CONTROLLER
+===================== */
+async function loadTransactions() {
+  const transactions = await fetchTransactions();
+  renderTransactionList(transactions);
+}
+
+/* =====================
+   HELPERS
+===================== */
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
+/* =====================
+   EVENTS
+===================== */
+$(function () {
+
+  loadTransactions();
+
+  $('#apply-filter').click(() => {
+    currentPage = 1;
+    loadTransactions();
+  });
+
+  $('#next-page').click(() => {
+    currentPage++;
+    loadTransactions();
+  });
+
+  $('#prev-page').click(() => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadTransactions();
+    }
+  });
+
+});
+</script>
+{% endblock %}

@@ -2,264 +2,688 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Dashboard</title>
+  <title>{% block title %}Dashboard{% endblock %} - SM</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Core CSS -->
-  <link rel="stylesheet" href="{% static 'assets/fonts/inter/inter.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/fonts/tabler-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
-
-  <!-- ================= PAGE-SPECIFIC CSS ================= -->
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap (if you're using it) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
   <style>
-    /* Sidebar widths */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    /* Sidebar Styles */
     .pc-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
       width: 260px;
-      transition: width 0.25s ease;
+      background: #1e293b;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+      overflow-y: auto;
     }
 
     body.pc-sidebar-collapse .pc-sidebar {
       width: 70px;
     }
 
-    /* Main content sync with sidebar */
-    .pc-container {
-      margin-left: 260px;
-      transition: margin-left 0.25s ease;
+    .m-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 70px;
     }
 
-    body.pc-sidebar-collapse .pc-container {
-      margin-left: 70px;
+    .b-brand {
+      color: #fff;
+      text-decoration: none;
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: all 0.3s ease;
     }
 
-    /* Header sync */
+    body.pc-sidebar-collapse .b-brand {
+      font-size: 18px;
+    }
+
+    .navbar-content {
+      padding: 20px 0;
+    }
+
+    .pc-navbar {
+      list-style: none;
+      padding: 0;
+    }
+
+    .pc-caption {
+      padding: 15px 20px 10px;
+      margin-top: 10px;
+    }
+
+    .pc-caption label {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    body.pc-sidebar-collapse .pc-caption label {
+      display: none;
+    }
+
+    .pc-item {
+      margin: 5px 10px;
+    }
+
+    .pc-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      color: #94a3b8;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pc-link:hover {
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      transform: translateX(5px);
+    }
+
+    .pc-link.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .pc-micon {
+      font-size: 20px;
+      width: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pc-mtext {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+    }
+
+    body.pc-sidebar-collapse .pc-mtext {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+    }
+
+    /* Header Styles */
     .pc-header {
+      position: fixed;
+      top: 0;
       left: 260px;
-      transition: left 0.25s ease;
+      right: 0;
+      height: 70px;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      padding: 0 30px;
     }
 
     body.pc-sidebar-collapse .pc-header {
       left: 70px;
     }
 
-    /* Fix logout button spacing */
-    .pc-header .btn {
-      white-space: nowrap;
+    .header-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
     }
+
+    #sidebarToggle {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      border-radius: 8px;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    #sidebarToggle:hover {
+      background: #667eea;
+      color: #fff;
+      transform: rotate(90deg);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .admin-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 15px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .admin-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .logout-btn {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Main Content */
+    .pc-container {
+      margin-left: 260px;
+      margin-top: 70px;
+      padding: 30px;
+      transition: all 0.3s ease;
+      min-height: calc(100vh - 70px);
+    }
+
+    body.pc-sidebar-collapse .pc-container {
+      margin-left: 70px;
+    }
+
+    .page-header {
+      margin-bottom: 30px;
+      background: rgba(255,255,255,0.95);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .page-header h2 {
+      color: #1e293b;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .page-header p {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    /* Dashboard Cards */
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid transparent;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      border-color: #667eea;
+    }
+
+    .card-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+
+    .card-icon.users {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-icon.events {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .card-icon.vendors {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .card-icon.payments {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    }
+
+    .card-content h3 {
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .card-footer span {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .card-footer i {
+      color: #667eea;
+      font-size: 18px;
+    }
+
+    /* Loading Animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Content Area Styles */
+    .content-wrapper {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    @media (max-width: 768px) {
+      .pc-sidebar {
+        transform: translateX(-100%);
+      }
+
+      body.sidebar-open .pc-sidebar {
+        transform: translateX(0);
+      }
+
+      .pc-container {
+        margin-left: 0;
+      }
+
+      .pc-header {
+        left: 0;
+      }
+
+      .dashboard-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    {% block extra_css %}{% endblock %}
   </style>
 </head>
 
-<body
-  data-pc-preset="preset-1"
-  data-pc-sidebar-caption="true"
-  data-pc-direction="ltr"
-  data-pc-theme="light"
-  class="pc-sidebar-collapse"
->
+<body class="pc-sidebar-collapse">
 
-<!-- ================= SIDEBAR ================= -->
+<!-- Sidebar -->
 <nav class="pc-sidebar">
   <div class="navbar-wrapper">
-
     <div class="m-header">
-      <a href="#" class="b-brand text-primary">
-        <span class="fw-bold fs-4">SplitApp</span>
-      </a>
+      <a href="{% url 'dashboard' %}" class="b-brand">SM</a>
     </div>
 
     <div class="navbar-content">
       <ul class="pc-navbar">
-
         <li class="pc-item pc-caption">
           <label>Management</label>
         </li>
 
         <li class="pc-item">
-          <a href="#" class="pc-link">
-            <span class="pc-micon"><i class="ti ti-users"></i></span>
+          <a href="{% url 'users' %}" class="pc-link {% if request.resolver_match.url_name == 'users' %}active{% endif %}">
+            <span class="pc-micon"><i class="fas fa-users"></i></span>
             <span class="pc-mtext">Users</span>
           </a>
         </li>
 
         <li class="pc-item">
-          <a href="#" class="pc-link">
-            <span class="pc-micon"><i class="ti ti-calendar-event"></i></span>
+          <a href="{% url 'list_events' %}" class="pc-link {% if 'events' in request.path %}active{% endif %}">
+            <span class="pc-micon"><i class="fas fa-calendar-alt"></i></span>
             <span class="pc-mtext">Events</span>
           </a>
         </li>
 
         <li class="pc-item">
-          <a href="#" class="pc-link">
-            <span class="pc-micon"><i class="ti ti-building-store"></i></span>
+          <a href="{}" class="pc-link {% if 'vendors' in request.path %}active{% endif %}">
+            <span class="pc-micon"><i class="fas fa-store"></i></span>
             <span class="pc-mtext">Vendors</span>
           </a>
         </li>
 
         <li class="pc-item">
-          <a href="#" class="pc-link">
-            <span class="pc-micon"><i class="ti ti-credit-card"></i></span>
+          <a href="{% url 'list_payments' %}" class="pc-link {% if 'payment' in request.path %}active{% endif %}">
+            <span class="pc-micon"><i class="fas fa-credit-card"></i></span>
             <span class="pc-mtext">Payments</span>
           </a>
         </li>
-
       </ul>
     </div>
-
   </div>
 </nav>
 
-<!-- ================= HEADER ================= -->
+<!-- Header -->
 <header class="pc-header">
   <div class="header-wrapper">
-
-    <!-- LEFT: ☰ TOGGLE -->
-    <div class="me-auto pc-mob-drp">
-      <ul class="list-unstyled">
-        <li class="pc-h-item">
-          <a href="#" class="pc-head-link ms-0" id="sidebarToggle">
-            <i class="ti ti-menu-2"></i>
-          </a>
-        </li>
-      </ul>
+    <div class="me-auto">
+      <button id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
     </div>
 
-    <!-- RIGHT -->
-    <div class="ms-auto">
-      <ul class="list-unstyled d-flex align-items-center mb-0">
-        <li class="pc-h-item me-2">
-          <span class="fw-semibold text-muted">Admin</span>
-        </li>
-        <li class="pc-h-item">
-          <button class="btn btn-outline-danger btn-sm">
-            <i class="ti ti-power"></i> Logout
-          </button>
-        </li>
-      </ul>
+    <div class="header-right">
+      <div class="admin-info">
+        <div class="admin-avatar">A</div>
+        <span style="font-weight: 600; color: #1e293b;">Admin</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+      </button>
     </div>
-
   </div>
 </header>
 
-<!-- ================= MAIN CONTENT ================= -->
+<!-- Main Content -->
 <div class="pc-container">
-  <div class="pc-content">
-
-    <div class="page-header mb-4">
-      <h2 class="mb-0">Dashboard</h2>
-      <p class="text-muted">Quick overview</p>
-    </div>
-
-    <div class="row">
-
-      <!-- USERS -->
-      <div class="col-md-6 col-xxl-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avtar avtar-s bg-light-primary">
-                  <i class="ti ti-users text-primary"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <h6 class="mb-0">Users</h6>
-                <small class="text-muted">Manage users</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- EVENTS -->
-      <div class="col-md-6 col-xxl-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avtar avtar-s bg-light-success">
-                  <i class="ti ti-calendar-event text-success"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <h6 class="mb-0">Events</h6>
-                <small class="text-muted">Trips & parties</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- VENDORS -->
-      <div class="col-md-6 col-xxl-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avtar avtar-s bg-light-warning">
-                  <i class="ti ti-building-store text-warning"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <h6 class="mb-0">Vendors</h6>
-                <small class="text-muted">Service providers</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PAYMENTS -->
-      <div class="col-md-6 col-xxl-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="flex-shrink-0">
-                <div class="avtar avtar-s bg-light-danger">
-                  <i class="ti ti-credit-card text-danger"></i>
-                </div>
-              </div>
-              <div class="flex-grow-1 ms-3">
-                <h6 class="mb-0">Payments</h6>
-                <small class="text-muted">Transactions</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
+  {% block content %}
+  <!-- Default Dashboard Content -->
+  <div class="page-header">
+    <h2>Dashboard</h2>
   </div>
+
+  <!-- Dashboard Cards -->
+  <div class="dashboard-cards">
+    <!-- Users Card -->
+    <a href="{% url 'users' %}" class="stat-card">
+      <div class="card-icon users">
+        <i class="fas fa-users"></i>
+      </div>
+      <div class="card-content">
+        <h3>Total Users</h3>
+        <div class="card-number" id="usersCount">
+          <span class="loading"></span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>View all users</span>
+        <i class="fas fa-arrow-right"></i>
+      </div>
+    </a>
+
+    <!-- Events Card -->
+    <a href="{% url 'list_events' %}" class="stat-card">
+      <div class="card-icon events">
+        <i class="fas fa-calendar-alt"></i>
+      </div>
+      <div class="card-content">
+        <h3>Active Events</h3>
+        <div class="card-number" id="eventsCount">
+          <span class="loading"></span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>Manage events</span>
+        <i class="fas fa-arrow-right"></i>
+      </div>
+    </a>
+
+    <!-- Vendors Card -->
+    <a href="{}" class="stat-card">
+      <div class="card-icon vendors">
+        <i class="fas fa-store"></i>
+      </div>
+      <div class="card-content">
+        <h3>Vendors</h3>
+        <div class="card-number" id="vendorsCount">
+          <span class="loading"></span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>View vendors</span>
+        <i class="fas fa-arrow-right"></i>
+      </div>
+    </a>
+
+    <!-- Payments Card -->
+    <a href="{% url 'list_payments' %}" class="stat-card">
+      <div class="card-icon payments">
+        <i class="fas fa-credit-card"></i>
+      </div>
+      <div class="card-content">
+        <h3>Total Payments</h3>
+        <div class="card-number" id="paymentsCount">
+          <span class="loading"></span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>View transactions</span>
+        <i class="fas fa-arrow-right"></i>
+      </div>
+    </a>
+  </div>
+  {% endblock %}
 </div>
 
-<!-- ================= CORE JS ================= -->
-<script src="{% static 'assets/js/plugins/bootstrap.min.js' %}"></script>
-<script src="{% static 'assets/js/plugins/simplebar.min.js' %}"></script>
-<script src="{% static 'assets/js/pcoded.js' %}"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- ================= PAGE-SPECIFIC JS ================= -->
+<!-- Bootstrap JS (if using) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-  const body = document.body;
-  const sidebar = document.querySelector('.pc-sidebar');
-  const toggleBtn = document.getElementById('sidebarToggle');
+$(document).ready(function() {
+  // Sidebar toggle
+  const body = $('body');
+  const sidebar = $('.pc-sidebar');
+  const toggleBtn = $('#sidebarToggle');
 
-  /* ☰ CLICK TOGGLE */
-  toggleBtn.addEventListener('click', function (e) {
+  toggleBtn.on('click', function(e) {
     e.preventDefault();
-    body.classList.toggle('pc-sidebar-collapse');
+    body.toggleClass('pc-sidebar-collapse');
   });
 
-  /* HOVER BEHAVIOR */
-  sidebar.addEventListener('mouseenter', () => {
-    body.classList.remove('pc-sidebar-collapse');
+  sidebar.on('mouseenter', function() {
+    body.removeClass('pc-sidebar-collapse');
   });
 
-  sidebar.addEventListener('mouseleave', () => {
-    body.classList.add('pc-sidebar-collapse');
+  sidebar.on('mouseleave', function() {
+    body.addClass('pc-sidebar-collapse');
   });
+
+  // Load dashboard stats only on dashboard page
+
+  if ($('#usersCount').length) {
+    setTimeout(function() {
+      loadDashboardStats();
+    }, 1000);
+  }
+
+});
+
+// Function to load dashboard statistics
+function loadDashboardStats() {
+  // TODO: Replace with actual API calls
+  // Example API structure:
+  $.ajax({
+    url: '/api/stats/users/',
+    method: 'GET',
+    success: function(data) {
+      animateCounter($('#usersCount'), data.count || 0);
+    },
+    error: function() {
+      $('#usersCount').html('--');
+    }
+  });
+
+  $.ajax({
+    url: '/api/stats/events/',
+    method: 'GET',
+    success: function(data) {
+      animateCounter($('#eventsCount'), data.count || 0);
+    },
+    error: function() {
+      $('#eventsCount').html('--');
+    }
+  });
+
+  $.ajax({
+    url: '/api/stats/vendors/',
+    method: 'GET',
+    success: function(data) {
+      animateCounter($('#vendorsCount'), data.count || 0);
+    },
+    error: function() {
+      $('#vendorsCount').html('--');
+    }
+  });
+
+  $.ajax({
+    url: '/api/stats/payments/',
+    method: 'GET',
+    success: function(data) {
+      animateCounter($('#paymentsCount'), data.count || 0);
+    },
+    error: function() {
+      $('#paymentsCount').html('--');
+    }
+  });
+}
+
+// Counter animation
+function animateCounter($element, targetValue) {
+  $element.html('0');
+  $({ counter: 0 }).animate({ counter: targetValue }, {
+    duration: 1500,
+    easing: 'swing',
+    step: function() {
+      $element.text(Math.ceil(this.counter));
+    },
+    complete: function() {
+      $element.text(targetValue.toLocaleString());
+    }
+  });
+}
+
+// Handle logout
+function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    window.location.href = '/logout/';
+  }
+}
+
+
 </script>
-
+{% block extra_js %}
+{% endblock %}
 </body>
 </html>

@@ -1,0 +1,311 @@
+{% extends "adminDashBoard.html" %}
+
+{% block content %}
+
+<style>
+.filter-card {
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+}
+
+.event-row {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+  transition: all .2s ease;
+}
+
+.event-row:hover {
+  box-shadow: 0 12px 25px rgba(0,0,0,.06);
+  transform: translateY(-2px);
+}
+
+.event-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.event-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.badge-category {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Events</h3>
+    <a href="/events/create/event/" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Add Event
+    </a>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="card filter-card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">From</label>
+          <input type="date" id="filter-from" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">To</label>
+          <input type="date" id="filter-to" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select id="filter-status" class="form-select">
+            <option value="">All</option>
+            <option value="created">Created</option>
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Search</label>
+          <input type="text" id="filter-search" class="form-control"
+                 placeholder="Search by title">
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button id="apply-filter" class="btn btn-primary">
+            <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT LIST -->
+  <div id="events-container">
+    <div id="events-list" class="d-grid gap-3"></div>
+
+    <!-- PAGINATION -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <div class="text-muted" id="pagination-info"></div>
+      <div>
+        <button id="prev-page" class="btn btn-outline-secondary btn-sm">Prev</button>
+        <button id="next-page" class="btn btn-outline-secondary btn-sm ms-2">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT DETAILS -->
+  <div id="event-details" class="card shadow-lg mt-4 d-none border-0">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h4 id="detail-title" class="fw-bold"></h4>
+          <small id="detail-meta" class="text-muted"></small>
+        </div>
+        <button id="close-details" class="btn btn-outline-secondary btn-sm">
+          Close
+        </button>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Total Amount:</strong> ₹ <span id="detail-total"></span></p>
+          <p><strong>Collected:</strong> ₹ <span id="detail-collected"></span></p>
+          <p><strong>Due Date:</strong> <span id="detail-due"></span></p>
+          <p><strong>Created By:</strong> <span id="detail-createdby"></span></p>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="fw-bold">Participants</h6>
+          <ul id="detail-members" class="list-group list-group-flush"></ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* =====================
+   CONFIG
+===================== */
+const URLS = {
+  LIST: '/api/events/',
+  SUMMARY: id => `/api/events/${id}/summary/`
+};
+
+let currentPage = 1;
+const pageSize = 10;
+
+/* =====================
+   FETCH UTIL
+===================== */
+async function fetchJSON(url, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const finalUrl = qs ? `${url}?${qs}` : url;
+
+  const res = await fetch(finalUrl, {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'same-origin'
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+/* =====================
+   DATA FUNCTIONS
+===================== */
+async function fetchEvents() {
+  const resp = await fetchJSON(URLS.LIST, {
+    pageNo: currentPage,
+    pageSize,
+    fromDate: $('#filter-from').val(),
+    toDate: $('#filter-to').val(),
+    status: $('#filter-status').val(),
+    q: $('#filter-search').val()
+  });
+
+  return resp?.Data ?? [];
+}
+
+async function fetchEventSummary(eventId) {
+  const resp = await fetchJSON(URLS.SUMMARY(eventId));
+  return resp?.Data ?? null;
+}
+
+/* =====================
+   RENDER FUNCTIONS
+===================== */
+function renderEventList(events) {
+  const $list = $('#events-list').empty();
+
+  if (!events.length) {
+    $list.html('<div class="text-muted p-4">No events found</div>');
+    return;
+  }
+
+  events.forEach(ev => {
+    $list.append(`
+      <div class="event-row" data-id="${ev.id}">
+        <div class="row align-items-center">
+
+          <div class="col-md-3">
+            <div class="event-title">${ev.title}</div>
+            <div class="event-meta">📅 ${ev.event_date}</div>
+          </div>
+
+          <div class="col-md-2">
+            <span class="badge badge-category">${ev.category_display}</span>
+          </div>
+
+          <div class="col-md-2">
+            <span class="badge bg-light text-dark">${ev.status_display}</span>
+          </div>
+
+          <div class="col-md-2 text-muted">👥 ${ev.persons_count}</div>
+          <div class="col-md-2 text-muted">👤 ${ev.created_by_name}</div>
+
+          <div class="col-md-1 text-end">
+            <button class="btn btn-sm btn-outline-primary view-summary">
+              View
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `);
+  });
+
+  $('#pagination-info').text(`Page ${currentPage}`);
+}
+
+function renderEventSummary(summary, eventId) {
+  $('#detail-title').text(`Event #${eventId}`);
+  $('#detail-meta').text(`📅 ${summary.event_date}`);
+  $('#detail-total').text(summary.total_amount);
+  $('#detail-collected').text(summary.collected_amount);
+  $('#detail-due').text(summary.due_date);
+  $('#detail-createdby').text(
+    `${summary.created_by.full_name} (${summary.created_by.email})`
+  );
+
+  const $members = $('#detail-members').empty();
+  (summary.members || []).forEach(m => {
+    $members.append(`
+      <li class="list-group-item">
+        <strong>${m.full_name}</strong><br>
+        <small class="text-muted">${m.email}</small>
+      </li>
+    `);
+  });
+
+  $('#events-container').addClass('d-none');
+  $('#event-details').removeClass('d-none')
+    .get(0).scrollIntoView({ behavior: 'smooth' });
+}
+
+/* =====================
+   CONTROLLER FUNCTIONS
+===================== */
+async function loadEvents() {
+  const events = await fetchEvents();
+  renderEventList(events);
+}
+
+async function openEventSummary(eventId) {
+  const summary = await fetchEventSummary(eventId);
+  if (summary) renderEventSummary(summary, eventId);
+}
+
+/* =====================
+   EVENTS
+===================== */
+$(function () {
+
+  loadEvents();
+
+  $('#apply-filter').click(() => {
+    currentPage = 1;
+    loadEvents();
+  });
+
+  $('#next-page').click(() => {
+    currentPage++;
+    loadEvents();
+  });
+
+  $('#prev-page').click(() => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadEvents();
+    }
+  });
+
+  $('#events-list').on('click', '.view-summary', function () {
+    const eventId = $(this).closest('.event-row').data('id');
+    openEventSummary(eventId);
+  });
+
+  $('#close-details').click(() => {
+    $('#event-details').addClass('d-none');
+    $('#events-container').removeClass('d-none');
+  });
+
+});
+</script>
+{% endblock %}

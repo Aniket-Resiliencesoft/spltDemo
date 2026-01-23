@@ -8,6 +8,7 @@ from events.api_views.event_api import (
     EventDeleteAPI,
     EventStatusUpdateAPI,
 )
+from . import ui_views
 
 urlpatterns = [
     # List and Create
@@ -22,5 +23,9 @@ urlpatterns = [
     # Status update
     path('api/events/<int:event_id>/status/', EventStatusUpdateAPI.as_view()),
     # Summary
-    path('events/<int:event_id>/summary/', EventSummaryAPI.as_view()),
+    path('api/events/<int:event_id>/summary/', EventSummaryAPI.as_view()),
+    # UI create event page
+    path('create/event/', ui_views.create_event_page),
+    # UI events list page (standalone)
+    path('list/events/', ui_views.list_events_page, name='list_events'),
 ]
