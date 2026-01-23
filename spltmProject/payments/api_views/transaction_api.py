@@ -19,8 +19,8 @@ from payments.serializers import (
 
 class TransactionListAPI(BaseAuthenticatedAPI):
     """
-    GET: List all transactions with pagination
-    Filters by event, user, or status if provided in query params
+    GET: List all transactions with pagination and filters
+    Supports filters: fromDate, toDate, status, search
     """
     
     def get(self, request):
@@ -30,42 +30,56 @@ class TransactionListAPI(BaseAuthenticatedAPI):
             return auth_error
         
         # Get pagination parameters
-        page_no = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
+        page_no = int(request.query_params.get('pageNo', 1))
+        page_size = int(request.query_params.get('pageSize', 10))
         
         # Get optional filters
-        event_id = request.query_params.get('event_id')
-        user_id = request.query_params.get('user_id')
-        status_filter = request.query_params.get('status')
-        transaction_type = request.query_params.get('transaction_type')
+        from_date = request.query_params.get('fromDate', '').strip()
+        to_date = request.query_params.get('toDate', '').strip()
+        status_filter = request.query_params.get('status', '').strip()
+        search_filter = request.query_params.get('search', '').strip()
         
         # Base query
         query = EventCollectionTransaction.objects.filter(is_active=True)
         
-        # Apply filters
-        if event_id:
-            query = query.filter(event_id=event_id)
-        if user_id:
-            query = query.filter(user_id=user_id)
+        # Apply date filters
+        if from_date:
+            query = query.filter(transaction_date__gte=from_date)
+        if to_date:
+            query = query.filter(transaction_date__lte=to_date)
+        
+        # Apply status filter
         if status_filter:
             query = query.filter(status=status_filter)
-        if transaction_type:
-            query = query.filter(transaction_type=transaction_type)
+        
+        # Apply search filter (search in event title, user name, etc)
+        if search_filter:
+            query = query.filter(
+                Q(event__title__icontains=search_filter) | 
+                Q(user__full_name__icontains=search_filter) |
+                Q(user__email__icontains=search_filter)
+            )
+        
+        query = query.order_by('-transaction_date')
+        
+        # Get total count before pagination
+        total_count = query.count()
         
         # Calculate offset
         offset = (page_no - 1) * page_size
         
-        # Get transactions
+        # Get transactions for this page
         transactions = query[offset:offset + page_size]
         
         # Serialize
         serializer = EventCollectionTransactionListSerializer(transactions, many=True)
         
-        # Return paginated response
+        # Return paginated response with total record count
         return self.paginated_response(
             data=serializer.data,
             page_no=page_no,
             page_size=page_size,
+            total_record=total_count,
             message="Transactions retrieved successfully"
         )
 

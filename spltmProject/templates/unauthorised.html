@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Unauthorized Access</title>
+
+  <!-- Meta -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'assets/images/favicon.svg' %}" type="image/x-icon">
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="{% static 'assets/fonts/inter/inter.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/tabler-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/feather.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/fontawesome.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/fonts/material.css' %}">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
+
+  <style>
+    .error-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .error-card {
+      background: white;
+      border-radius: 16px;
+      padding: 60px 40px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .error-icon {
+      font-size: 80px;
+      color: #ff6b6b;
+      margin-bottom: 20px;
+    }
+
+    .error-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 15px;
+    }
+
+    .error-message {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .error-code {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 30px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 40px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+      color: white;
+    }
+  </style>
+</head>
+
+<body data-pc-preset="preset-1" data-pc-sidebar-caption="true" data-pc-direction="ltr" data-pc-theme="light">
+
+  <!-- Error Container -->
+  <div class="error-container">
+    <div class="error-card">
+      <div class="error-icon">
+        <i class="ti ti-lock-off"></i>
+      </div>
+      <h1 class="error-title">Access Denied</h1>
+      <p class="error-message">
+        Your session has expired or you don't have permission to access this resource. 
+        Please log in again to continue.
+      </p>
+      <div class="error-code">Error: UNAUTHORIZED_ACCESS (401)</div>
+      <a href="/" class="btn-login">Return to Login</a>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="{% static 'assets/js/plugins/popper.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/bootstrap.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/simplebar.min.js' %}"></script>
+  <script src="{% static 'assets/js/plugins/feather.min.js' %}"></script>
+
+</body>
+</html>

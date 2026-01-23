@@ -118,6 +118,7 @@ class BaseAuthenticatedAPI(APIView):
         page_no,
         page_size,
         message="Success",
+        total_record=None,
         status_code=status.HTTP_200_OK
     ):
         """
@@ -130,7 +131,8 @@ class BaseAuthenticatedAPI(APIView):
             return self.paginated_response(
                 data=UserGetSerializer(items, many=True).data,
                 page_no=page_no,
-                page_size=page_size
+                page_size=page_size,
+                total_record=items.count()
             )
         """
         return api_response_paginated(
@@ -138,5 +140,6 @@ class BaseAuthenticatedAPI(APIView):
             page_no=page_no,
             page_size=page_size,
             message=message,
+            total_record=total_record,
             status_code=status_code
         )

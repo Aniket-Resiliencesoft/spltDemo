@@ -5,6 +5,7 @@ Endpoints for creating, retrieving, updating, and deleting events.
 """
 
 from django.contrib.auth.hashers import make_password
+from django.db.models import Q
 from rest_framework import status
 
 from common.api.base_api import BaseAuthenticatedAPI
@@ -20,8 +21,8 @@ from events.serializers import (
 
 class EventListAPI(BaseAuthenticatedAPI):
     """
-    GET: Retrieve all events with pagination
-    Filters by status if provided in query params
+    GET: Retrieve all events with pagination and filters
+    Supports filters: fromDate, toDate, status, category, search
     """
     
     def get(self, request):
@@ -31,12 +32,15 @@ class EventListAPI(BaseAuthenticatedAPI):
             return auth_error
         
         # Get pagination parameters
-        page_no = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
+        page_no = int(request.query_params.get('pageNo', 1))
+        page_size = int(request.query_params.get('pageSize', 10))
         
         # Get optional filters
-        status_filter = request.query_params.get('status')
-        category_filter = request.query_params.get('category')
+        from_date = request.query_params.get('fromDate', '').strip()
+        to_date = request.query_params.get('toDate', '').strip()
+        status_filter = request.query_params.get('status', '').strip()
+        category_filter = request.query_params.get('category', '').strip()
+        search_filter = request.query_params.get('search', '').strip()
         
         # Base query
         query = Event.objects.filter(is_active=True)
@@ -44,27 +48,47 @@ class EventListAPI(BaseAuthenticatedAPI):
         if request.jwt_user['role'] != "ADMIN":
             query = query.filter(created_by=request.jwt_user['user_id'])
 
-            query = query.order_by('-created_at')
-            # Apply filters
-            if status_filter:
-                query = query.filter(status=status_filter)
-            if category_filter:
-                query = query.filter(category=category_filter)
+        query = query.order_by('-created_at')
+        
+        # Apply date filters
+        if from_date:
+            query = query.filter(event_date__gte=from_date)
+        if to_date:
+            query = query.filter(event_date__lte=to_date)
+        
+        # Apply status filter
+        if status_filter:
+            query = query.filter(status=status_filter)
+        
+        # Apply category filter
+        if category_filter:
+            query = query.filter(category=category_filter)
+        
+        # Apply search filter (search in title and description)
+        if search_filter:
+            query = query.filter(
+                Q(title__icontains=search_filter) | 
+                Q(description__icontains=search_filter)
+            )
+        
+        # Get total count before pagination
+        total_count = query.count()
         
         # Calculate offset
         offset = (page_no - 1) * page_size
         
-        # Get events
+        # Get events for this page
         events = query[offset:offset + page_size]
         
         # Serialize
         serializer = EventListSerializer(events, many=True)
         
-        # Return paginated response
+        # Return paginated response with total record count
         return self.paginated_response(
             data=serializer.data,
             page_no=page_no,
             page_size=page_size,
+            total_record=total_count,
             message="Events retrieved successfully"
         )
 

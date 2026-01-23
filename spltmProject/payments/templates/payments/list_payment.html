@@ -2,10 +2,13 @@
 
 {% block content %}
 
+<link rel="stylesheet" href="/static/assets/css/pagination.css">
+
 <style>
 .filter-card {
   border-radius: 14px;
   border: 1px solid #eef2f7;
+  background: linear-gradient(180deg, #efefef, rgba(255, 255, 255, 0) 100%);
 }
 
 .tx-row {
@@ -14,6 +17,7 @@
   padding: 14px 18px;
   background: #fff;
   transition: all .2s ease;
+  cursor: pointer;
 }
 
 .tx-row:hover {
@@ -35,6 +39,16 @@
   background: #eef2ff;
   color: #4f46e5;
 }
+
+.btn-primary {
+  background-color: #94d600 !important;
+  border-color: #94d600 !important;
+}
+
+.btn-primary:hover {
+  background-color: #7ab800 !important;
+  border-color: #7ab800 !important;
+}
 </style>
 
 <div class="container-fluid mt-4">
@@ -52,24 +66,19 @@
       <div class="row g-3 align-items-end">
 
         <div class="col-md-3">
-          <label class="form-label">Event</label>
-          <input type="text" id="filter-event" class="form-control"
-                 placeholder="Event title">
-        </div>
-
-        <div class="col-md-3">
-          <label class="form-label">User</label>
-          <input type="text" id="filter-user" class="form-control"
-                 placeholder="User name">
+          <label class="form-label">Search</label>
+          <input type="text" id="filter-search" class="form-control"
+                 placeholder="Event, user, or amount">
         </div>
 
         <div class="col-md-2">
-          <label class="form-label">Type</label>
-          <select id="filter-type" class="form-select">
-            <option value="">All</option>
-            <option value="contribution">Contribution</option>
-            <option value="expense">Expense</option>
-          </select>
+          <label class="form-label">From Date</label>
+          <input type="date" id="filter-from" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">To Date</label>
+          <input type="date" id="filter-to" class="form-control">
         </div>
 
         <div class="col-md-2">
@@ -81,7 +90,7 @@
           </select>
         </div>
 
-        <div class="col-md-2 d-grid">
+        <div class="col-md-1 d-grid">
           <button id="apply-filter" class="btn btn-primary">
             <i class="ti ti-filter"></i> Apply
           </button>
@@ -98,14 +107,13 @@
 
     <div id="transactions-list" class="d-grid gap-3"></div>
 
-    <!-- PAGINATION -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <div class="text-muted" id="pagination-info"></div>
-      <div>
-        <button id="prev-page" class="btn btn-outline-secondary btn-sm">Prev</button>
-        <button id="next-page" class="btn btn-outline-secondary btn-sm ms-2">Next</button>
-      </div>
-    </div>
+    <!-- PAGINATION INFO -->
+    <div class="pagination-info" id="pagination-info"></div>
+
+    <!-- PAGINATION CONTROLS -->
+    <nav>
+      <ul id="transactions-pagination" class="pagination justify-content-center"></ul>
+    </nav>
 
   </div>
 
@@ -114,142 +122,85 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
 <script>
-/* =====================
-   CONFIG
-===================== */
-const URLS = {
-  LIST: '/api/transactions/'
-};
-
 let currentPage = 1;
 const pageSize = 10;
 
-/* =====================
-   FETCH UTIL
-===================== */
-async function fetchJSON(url, params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  const finalUrl = qs ? `${url}?${qs}` : url;
-
-  const res = await fetch(finalUrl, {
-    headers: { 'Accept': 'application/json' },
-    credentials: 'same-origin'
-  });
-
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.json();
-}
-
-/* =====================
-   DATA FUNCTIONS
-===================== */
-async function fetchTransactions() {
-  const resp = await fetchJSON(URLS.LIST, {
+async function loadTransactions() {
+  const params = {
     pageNo: currentPage,
     pageSize,
-    event: $('#filter-event').val(),
-    user: $('#filter-user').val(),
-    transaction_type: $('#filter-type').val(),
-    status: $('#filter-status').val()
-  });
+    fromDate: document.getElementById('filter-from')?.value || '',
+    toDate: document.getElementById('filter-to')?.value || '',
+    status: document.getElementById('filter-status')?.value || '',
+    search: document.getElementById('filter-search')?.value || ''
+  };
 
-  return resp?.Data ?? [];
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const url = `/api/transactions/?${qs}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const resp = await response.json();
+    const items = resp.data || resp.Data || [];
+    const totalPages = resp.TotalPages || 1;
+    const totalRecords = resp.TotalRecord || 0;
+
+    renderTransactionList(items);
+    displayPaginationInfo('pagination-info', currentPage, totalPages, totalRecords);
+    renderPagination('transactions-pagination', currentPage, totalPages, (page) => {
+      currentPage = page;
+      loadTransactions();
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-/* =====================
-   RENDER FUNCTIONS
-===================== */
 function renderTransactionList(transactions) {
-  const $list = $('#transactions-list').empty();
+  const list = document.getElementById('transactions-list');
+  list.innerHTML = '';
 
   if (!transactions.length) {
-    $list.html('<div class="text-muted p-4">No transactions found</div>');
+    list.innerHTML = '<div class="text-muted p-4">No transactions found</div>';
     return;
   }
 
   transactions.forEach(tx => {
-    $list.append(`
-      <div class="tx-row">
-        <div class="row align-items-center">
-
-          <div class="col-md-3">
-            <div class="tx-title">${tx.event_title}</div>
-            <div class="tx-meta">📅 ${formatDate(tx.transaction_date)}</div>
-          </div>
-
-          <div class="col-md-2">
-            👤 ${tx.user_name}
-          </div>
-
-          <div class="col-md-2">
-            <span class="badge badge-type">
-              ${tx.transaction_type_display}
-            </span>
-          </div>
-
-          <div class="col-md-2">
-            <span class="badge bg-light text-dark">
-              ${tx.status_display}
-            </span>
-          </div>
-
-          <div class="col-md-2 fw-semibold">
-            ₹ ${tx.amount}
-          </div>
-
-          <div class="col-md-1 text-end text-muted">
-            #${tx.id}
-          </div>
-
+    const row = document.createElement('div');
+    row.className = 'tx-row';
+    row.innerHTML = `
+      <div class="row align-items-center">
+        <div class="col-md-3">
+          <div class="tx-title">${tx.event_title || 'Event'}</div>
+          <div class="tx-meta">📅 ${tx.transaction_date || ''}</div>
         </div>
+        <div class="col-md-2">👤 ${tx.user_name || 'N/A'}</div>
+        <div class="col-md-2">
+          <span class="badge badge-type">${tx.transaction_type_display || tx.transaction_type || ''}</span>
+        </div>
+        <div class="col-md-2">
+          <span class="badge bg-light text-dark">${tx.status_display || tx.status || ''}</span>
+        </div>
+        <div class="col-md-2 fw-semibold">₹ ${tx.amount || 0}</div>
+        <div class="col-md-1 text-end text-muted">#${tx.id || ''}</div>
       </div>
-    `);
+    `;
+    list.appendChild(row);
   });
-
-  $('#pagination-info').text(`Page ${currentPage}`);
 }
 
-/* =====================
-   CONTROLLER
-===================== */
-async function loadTransactions() {
-  const transactions = await fetchTransactions();
-  renderTransactionList(transactions);
-}
-
-/* =====================
-   HELPERS
-===================== */
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-}
-
-/* =====================
-   EVENTS
-===================== */
-$(function () {
-
+document.addEventListener('DOMContentLoaded', function () {
   loadTransactions();
 
-  $('#apply-filter').click(() => {
-    currentPage = 1;
-    loadTransactions();
-  });
-
-  $('#next-page').click(() => {
-    currentPage++;
-    loadTransactions();
-  });
-
-  $('#prev-page').click(() => {
-    if (currentPage > 1) {
-      currentPage--;
+  const applyFilterBtn = document.getElementById('apply-filter');
+  if (applyFilterBtn) {
+    applyFilterBtn.addEventListener('click', () => {
+      currentPage = 1;
       loadTransactions();
-    }
-  });
-
+    });
+  }
 });
 </script>
 {% endblock %}

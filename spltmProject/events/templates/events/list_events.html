@@ -2,6 +2,8 @@
 
 {% block content %}
 
+<link rel="stylesheet" href="/static/assets/css/pagination.css">
+
 <style>
 .filter-card {
   border-radius: 14px;
@@ -14,6 +16,7 @@
   padding: 16px 18px;
   background: #fff;
   transition: all .2s ease;
+  cursor: pointer;
 }
 
 .event-row:hover {
@@ -91,14 +94,13 @@
   <div id="events-container">
     <div id="events-list" class="d-grid gap-3"></div>
 
-    <!-- PAGINATION -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <div class="text-muted" id="pagination-info"></div>
-      <div>
-        <button id="prev-page" class="btn btn-outline-secondary btn-sm">Prev</button>
-        <button id="next-page" class="btn btn-outline-secondary btn-sm ms-2">Next</button>
-      </div>
-    </div>
+    <!-- PAGINATION INFO -->
+    <div class="pagination-info" id="pagination-info"></div>
+
+    <!-- PAGINATION CONTROLS -->
+    <nav>
+      <ul id="events-pagination" class="pagination justify-content-center"></ul>
+    </nav>
   </div>
 
   <!-- EVENT DETAILS -->
@@ -139,173 +141,148 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
 <script>
-/* =====================
-   CONFIG
-===================== */
-const URLS = {
-  LIST: '/api/events/',
-  SUMMARY: id => `/api/events/${id}/summary/`
-};
-
 let currentPage = 1;
 const pageSize = 10;
 
-/* =====================
-   FETCH UTIL
-===================== */
-async function fetchJSON(url, params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  const finalUrl = qs ? `${url}?${qs}` : url;
-
-  const res = await fetch(finalUrl, {
-    headers: { 'Accept': 'application/json' },
-    credentials: 'same-origin'
-  });
-
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return await res.json();
-}
-
-/* =====================
-   DATA FUNCTIONS
-===================== */
-async function fetchEvents() {
-  const resp = await fetchJSON(URLS.LIST, {
+async function loadEvents() {
+  const params = {
     pageNo: currentPage,
     pageSize,
-    fromDate: $('#filter-from').val(),
-    toDate: $('#filter-to').val(),
-    status: $('#filter-status').val(),
-    q: $('#filter-search').val()
-  });
+    fromDate: document.getElementById('filter-from').value || '',
+    toDate: document.getElementById('filter-to').value || '',
+    status: document.getElementById('filter-status').value || '',
+    search: document.getElementById('filter-search').value || ''
+  };
 
-  return resp?.Data ?? [];
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const url = `/api/events/?${qs}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const resp = await response.json();
+    const items = resp.data || resp.Data || [];
+    const totalPages = resp.TotalPages || 1;
+    const totalRecords = resp.TotalRecord || 0;
+
+    renderEventList(items);
+    displayPaginationInfo('pagination-info', currentPage, totalPages, totalRecords);
+    renderPagination('events-pagination', currentPage, totalPages, (page) => {
+      currentPage = page;
+      loadEvents();
+    });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-async function fetchEventSummary(eventId) {
-  const resp = await fetchJSON(URLS.SUMMARY(eventId));
-  return resp?.Data ?? null;
-}
-
-/* =====================
-   RENDER FUNCTIONS
-===================== */
 function renderEventList(events) {
-  const $list = $('#events-list').empty();
+  const list = document.getElementById('events-list');
+  list.innerHTML = '';
 
   if (!events.length) {
-    $list.html('<div class="text-muted p-4">No events found</div>');
+    list.innerHTML = '<div class="text-muted p-4">No events found</div>';
     return;
   }
 
   events.forEach(ev => {
-    $list.append(`
-      <div class="event-row" data-id="${ev.id}">
-        <div class="row align-items-center">
-
-          <div class="col-md-3">
-            <div class="event-title">${ev.title}</div>
-            <div class="event-meta">📅 ${ev.event_date}</div>
-          </div>
-
-          <div class="col-md-2">
-            <span class="badge badge-category">${ev.category_display}</span>
-          </div>
-
-          <div class="col-md-2">
-            <span class="badge bg-light text-dark">${ev.status_display}</span>
-          </div>
-
-          <div class="col-md-2 text-muted">👥 ${ev.persons_count}</div>
-          <div class="col-md-2 text-muted">👤 ${ev.created_by_name}</div>
-
-          <div class="col-md-1 text-end">
-            <button class="btn btn-sm btn-outline-primary view-summary">
-              View
-            </button>
-          </div>
-
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.dataset.id = ev.id;
+    row.innerHTML = `
+      <div class="row align-items-center">
+        <div class="col-md-3">
+          <div class="event-title">${ev.title}</div>
+          <div class="event-meta">📅 ${ev.event_date || ''}</div>
+        </div>
+        <div class="col-md-2">
+          <span class="badge badge-category">${ev.category || ''}</span>
+        </div>
+        <div class="col-md-2">
+          <span class="badge bg-light text-dark">${ev.status || ''}</span>
+        </div>
+        <div class="col-md-2 text-muted">👥 ${ev.persons_count || 0}</div>
+        <div class="col-md-2 text-muted">👤 ${ev.created_by_name || ''}</div>
+        <div class="col-md-1 text-end">
+          <button class="btn btn-sm btn-outline-primary view-summary">View</button>
         </div>
       </div>
-    `);
+    `;
+    list.appendChild(row);
   });
 
-  $('#pagination-info').text(`Page ${currentPage}`);
+  // Attach view summary handlers
+  document.querySelectorAll('.view-summary').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const eventId = btn.closest('.event-row').dataset.id;
+      try {
+        const response = await fetch(`/api/events/${eventId}/summary/`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const resp = await response.json();
+        const summary = resp.data || resp.Data || {};
+        renderEventSummary(summary, eventId);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
+
+  // Also allow clicking the row itself
+  document.querySelectorAll('.event-row').forEach(row => {
+    row.addEventListener('click', async (e) => {
+      if (e.target.closest('.view-summary')) return; // Skip if clicked on button
+      const eventId = row.dataset.id;
+      try {
+        const response = await fetch(`/api/events/${eventId}/summary/`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const resp = await response.json();
+        const summary = resp.data || resp.Data || {};
+        renderEventSummary(summary, eventId);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
 }
 
 function renderEventSummary(summary, eventId) {
-  $('#detail-title').text(`Event #${eventId}`);
-  $('#detail-meta').text(`📅 ${summary.event_date}`);
-  $('#detail-total').text(summary.total_amount);
-  $('#detail-collected').text(summary.collected_amount);
-  $('#detail-due').text(summary.due_date);
-  $('#detail-createdby').text(
-    `${summary.created_by.full_name} (${summary.created_by.email})`
-  );
+  const createdBy = summary.created_by || {};
+  document.getElementById('detail-title').innerText = `Event #${eventId}`;
+  document.getElementById('detail-meta').innerText = `📅 ${summary.event_date || ''} • ${summary.start_date_time || ''}`;
+  document.getElementById('detail-total').innerText = summary.total_amount ?? '-';
+  document.getElementById('detail-collected').innerText = summary.collected_amount ?? '-';
+  document.getElementById('detail-due').innerText = summary.due_date || '-';
+  document.getElementById('detail-createdby').innerText = `${createdBy.full_name || createdBy.email || '-'}`;
 
-  const $members = $('#detail-members').empty();
+  const membersList = document.getElementById('detail-members');
+  membersList.innerHTML = '';
   (summary.members || []).forEach(m => {
-    $members.append(`
-      <li class="list-group-item">
-        <strong>${m.full_name}</strong><br>
-        <small class="text-muted">${m.email}</small>
-      </li>
-    `);
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.innerHTML = `<strong>${m.full_name || m.email}</strong><br><small class="text-muted">${m.email || ''}</small>`;
+    membersList.appendChild(li);
   });
 
-  $('#events-container').addClass('d-none');
-  $('#event-details').removeClass('d-none')
-    .get(0).scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('events-container').classList.add('d-none');
+  document.getElementById('event-details').classList.remove('d-none');
+  document.getElementById('event-details').scrollIntoView({ behavior: 'smooth' });
 }
 
-/* =====================
-   CONTROLLER FUNCTIONS
-===================== */
-async function loadEvents() {
-  const events = await fetchEvents();
-  renderEventList(events);
-}
-
-async function openEventSummary(eventId) {
-  const summary = await fetchEventSummary(eventId);
-  if (summary) renderEventSummary(summary, eventId);
-}
-
-/* =====================
-   EVENTS
-===================== */
-$(function () {
-
+document.addEventListener('DOMContentLoaded', function () {
   loadEvents();
 
-  $('#apply-filter').click(() => {
+  document.getElementById('apply-filter').addEventListener('click', () => {
     currentPage = 1;
     loadEvents();
   });
 
-  $('#next-page').click(() => {
-    currentPage++;
-    loadEvents();
+  document.getElementById('close-details').addEventListener('click', () => {
+    document.getElementById('event-details').classList.add('d-none');
+    document.getElementById('events-container').classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-
-  $('#prev-page').click(() => {
-    if (currentPage > 1) {
-      currentPage--;
-      loadEvents();
-    }
-  });
-
-  $('#events-list').on('click', '.view-summary', function () {
-    const eventId = $(this).closest('.event-row').data('id');
-    openEventSummary(eventId);
-  });
-
-  $('#close-details').click(() => {
-    $('#event-details').addClass('d-none');
-    $('#events-container').removeClass('d-none');
-  });
-
 });
 </script>
 {% endblock %}

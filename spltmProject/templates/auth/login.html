@@ -94,6 +94,14 @@
 </html>
 <script>
 $(document).ready(function () {
+    
+    // Check if user is already logged in
+    const token = getCookie('access_token') || localStorage.getItem('access_token');
+    if (token) {
+        // User is already logged in, redirect to dashboard
+        window.location.href = "{% url 'dashboard' %}";
+        return;
+    }
 
     $("#loginForm").on("submit", function (e) {
         e.preventDefault(); // stop form submit

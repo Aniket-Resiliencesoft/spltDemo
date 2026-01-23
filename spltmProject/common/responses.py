@@ -28,9 +28,11 @@ class APIResponse:
         message: str = "",
         page_no: Optional[int] = None,
         page_size: Optional[int] = None,
+        total_record: Optional[int] = None,
     ):
         self.page_no = page_no
         self.page_size = page_size
+        self.total_record = total_record
         self.data = data if data is not None else []
         self.is_success = is_success
         self.message = message
@@ -48,6 +50,9 @@ class APIResponse:
             response_dict["PageNo"] = self.page_no
         if self.page_size is not None:
             response_dict["PageSize"] = self.page_size
+        if self.total_record is not None:
+            response_dict["TotalRecord"] = self.total_record
+            response_dict["TotalPages"] = (self.total_record + self.page_size - 1) // self.page_size
             
         return response_dict
 
@@ -125,6 +130,7 @@ def api_response_paginated(
     page_no: int,
     page_size: int,
     message: str = "Success",
+    total_record: Optional[int] = None,
     status_code: int = http_status.HTTP_200_OK,
 ) -> Response:
     """
@@ -135,6 +141,7 @@ def api_response_paginated(
         page_no: Current page number
         page_size: Items per page
         message: Success message
+        total_record: Total number of records (optional)
         status_code: HTTP status code
         
     Returns:
@@ -146,6 +153,7 @@ def api_response_paginated(
         message=message,
         page_no=page_no,
         page_size=page_size,
+        total_record=total_record,
     )
     return response.to_response(status_code)
 

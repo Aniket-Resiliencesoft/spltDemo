@@ -201,16 +201,22 @@
 <script>
 $(function () {
 
-  function loadEvents(page = 1) {
-    apiGetList('/api/events', {
+  async function loadEvents(page = 1) {
+    const params = {
       pageNo: page,
       pageSize: 8,
-      fromDate: $('#filter_from').val(),
-      toDate: $('#filter_to').val(),
-      status: $('#filter_status').val()
-    }).then(resp => {
+      fromDate: $('#filter_from').val() || '',
+      toDate: $('#filter_to').val() || '',
+      status: $('#filter_status').val() || ''
+    };
 
-      const items = resp.data || resp.items || [];
+    try {
+      const qs = new URLSearchParams(params).toString();
+      const url = `/api/events/?${qs}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const resp = await response.json();
+      const items = resp.data || resp.Data || [];
       const $list = $('#events-list').empty();
 
       if (!items.length) {
@@ -242,7 +248,9 @@ $(function () {
           </div>
         `);
       });
-    });
+    } catch (err) {
+      console.error('Error loading events:', err);
+    }
   }
 
   loadEvents();

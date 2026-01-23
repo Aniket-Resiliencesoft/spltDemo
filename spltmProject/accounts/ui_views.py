@@ -3,7 +3,7 @@ import hashlib
 import json
 import time
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.db.models import Sum, Count
@@ -14,13 +14,20 @@ from django.http import StreamingHttpResponse, HttpResponse
 from accounts.models import User
 from events.models import Event
 from payments.models import EventCollectionTransaction
+from common.decorators import login_required_view
 
 def login_view(request):
     """
     Renders login page.
+    If user is already logged in, redirects to dashboard.
     """
+    token = request.COOKIES.get('access_token')
+    if token:
+        return redirect('/dashboard/')
     return render(request, 'auth/login.html')
 
+
+@login_required_view
 def adminDashBoard(request):
     """
     Docstring for adminDashBoard
@@ -92,6 +99,7 @@ def adminDashBoard(request):
     return render(request, 'adminDashBoard.html', context)
 
 
+@login_required_view
 def dashboard_stream(request):
     """
     Server-Sent Events endpoint that pushes dashboard snapshots when data changes.
@@ -222,6 +230,7 @@ def dashboard_stream(request):
     return response
 
 
+@login_required_view
 def user_list_view(request):
     """Render a paginated, searchable card-style list of users that extends admin dashboard."""
     # Basic auth guard: require jwt_user and ADMIN role (follow adminDashBoard pattern)
@@ -260,6 +269,7 @@ def user_list_view(request):
     return render(request, 'accounts/userlist.html', context)
 
 
+@login_required_view
 def user_create_view(request):
     """Render a simple user creation page that extends admin dashboard.
 
@@ -273,3 +283,26 @@ def user_create_view(request):
     #     return HttpResponse("Forbidden", status=403)
 
     return render(request, 'accounts/user_create.html', {})
+
+
+@login_required_view
+def logout_view(request):
+    """
+    Logout view that clears authentication tokens and redirects to login page.
+    Removes JWT token from cookies and localStorage (via client-side script).
+    """
+    from django.http import JsonResponse
+    
+    response = JsonResponse({
+        "IsSuccess": True,
+        "Message": "Logged out successfully"
+    })
+    
+    # Clear authentication cookies
+    response.delete_cookie('access_token', path='/')
+    response.delete_cookie('user_role', path='/')
+    response.delete_cookie('user_name', path='/')
+    response.delete_cookie('user_email', path='/')
+    response.delete_cookie('csrftoken', path='/')
+    
+    return response

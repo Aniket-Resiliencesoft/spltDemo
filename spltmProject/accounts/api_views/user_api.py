@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from django.contrib.auth.hashers import make_password
+from django.db.models import Q
 
 from accounts.models import Role, User, UserRole
 from accounts.serializer import (
@@ -17,7 +18,8 @@ from accounts.serializer import UserRoleCreateSerializer
 class UserListAPI(BaseAuthenticatedAPI):
     """
     GET:
-    Returns list of all active users.
+    Returns list of all active users with optional filtering and search.
+    Supports search filter on name and email.
     Used in Admin User Management screen.
     """
 
@@ -26,10 +28,23 @@ class UserListAPI(BaseAuthenticatedAPI):
         error = self.require_admin_role(request)
         if error:
             return error
-        page_no = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 10))
+        
+        page_no = int(request.query_params.get('pageNo', 1))
+        page_size = int(request.query_params.get('pageSize', 10))
+        search_filter = request.query_params.get('search', '').strip()
 
         qs = User.objects.filter(is_active=True).order_by('-created_at')
+        
+        # Apply search filter
+        if search_filter:
+            qs = qs.filter(
+                Q(full_name__icontains=search_filter) | 
+                Q(email__icontains=search_filter)
+            )
+        
+        # Get total count before pagination
+        total_count = qs.count()
+        
         offset = (page_no - 1) * page_size
         users = qs[offset:offset + page_size]
 
@@ -38,6 +53,7 @@ class UserListAPI(BaseAuthenticatedAPI):
             data=serializer.data,
             page_no=page_no,
             page_size=page_size,
+            total_record=total_count,
             message="Users retrieved successfully"
         )
     
