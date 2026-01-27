@@ -3,6 +3,8 @@ from common.utils.jwt_utils import decode_jwt_token
 
 EXEMPT_URLS = (
     '/api/auth/login/',
+    '/api/auth/otp/generate/',
+    '/api/auth/otp/verify/',
     '/api/users/create/',
     '/api/auth/generateOTP',
     '/api/auth/verifyOTP',

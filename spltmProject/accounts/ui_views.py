@@ -42,6 +42,49 @@ def login_view(request):
     return render(request, 'auth/login.html')
 
 
+def register_view(request):
+    """
+    Renders registration page.
+    If user is already logged in with a VALID token, redirects to dashboard.
+    """
+    token = request.COOKIES.get('access_token')
+    
+    if token:
+        # Validate token before redirecting
+        try:
+            payload = decode_jwt_token(token)
+            # Token is valid, redirect to dashboard
+            return redirect('/dashboard/')
+        except Exception as e:
+            # Token is invalid or expired
+            # Clear the invalid token and show registration page
+            response = render(request, 'auth/register.html')
+            response.delete_cookie('access_token')
+            return response
+    
+    # No token, show registration page
+    return render(request, 'auth/register.html')
+
+
+def verify_otp_view(request):
+    """
+    Renders OTP verification page for non-admin users.
+    Expects otp_user_id and otp_email to be set in localStorage on client side.
+    """
+    # Check if user has been redirected from login
+    # This is client-side validation, so we just render the page
+    return render(request, 'auth/verify_otp.html')
+
+
+@login_required_view
+def dashboard_view(request):
+    """
+    Renders dashboard page for authenticated users.
+    Shows statistics about users, events, and payments.
+    """
+    return render(request, 'dashboard.html')
+
+
 @login_required_view
 def adminDashBoard(request):
     """

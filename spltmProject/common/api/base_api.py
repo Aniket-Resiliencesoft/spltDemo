@@ -23,9 +23,9 @@ class BaseAuthenticatedAPI(APIView):
         Returns Response if not authenticated, else None.
         """
         if not hasattr(request, 'jwt_user'):
-            return Response(
-                {"message": "Authentication required"},
-                status=status.HTTP_401_UNAUTHORIZED
+            return api_response_error(
+                message="Authentication required",
+                status_code=status.HTTP_401_UNAUTHORIZED
             )
         return None
 
@@ -40,9 +40,9 @@ class BaseAuthenticatedAPI(APIView):
         role = request.jwt_user.get('role')
         # If role is missing (older tokens) treat as admin to avoid blocking UI; otherwise require ADMIN
         if role and str(role).upper() != 'ADMIN':
-            return Response(
-                {"message": "Admin access required"},
-                status=status.HTTP_403_FORBIDDEN
+            return api_response_error(
+                message="Admin access required",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         return None
 
@@ -58,9 +58,9 @@ class BaseAuthenticatedAPI(APIView):
         jwt_role = request.jwt_user.get('role')
 
         if jwt_role != 'ADMIN' and jwt_user_id != user_id:
-            return Response(
-                {"message": "Permission denied"},
-                status=status.HTTP_403_FORBIDDEN
+            return api_response_error(
+                message="Permission denied",
+                status_code=status.HTTP_403_FORBIDDEN
             )
         return None
 

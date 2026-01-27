@@ -29,6 +29,7 @@ class User(BaseModel):
     last_login = models.DateTimeField(null=True, blank=True)
     otp = models.CharField(max_length=6, null=True, blank=True)
     otp_generated_at = models.DateTimeField(null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
     
     def generate_otp(self):
         """
@@ -45,6 +46,7 @@ class User(BaseModel):
         """
         Verify if the provided OTP is correct and not expired.
         OTP expires after 10 minutes.
+        Mark email as verified on successful verification.
         """
         if not self.otp or not self.otp_generated_at:
             return False
@@ -58,9 +60,10 @@ class User(BaseModel):
         if timezone.now() > expiry_time:
             return False
         
-        # Clear OTP after successful verification
+        # Clear OTP after successful verification and mark email as verified
         self.otp = None
         self.otp_generated_at = None
+        self.email_verified = True
         self.save()
         return True
     
