@@ -1,0 +1,165 @@
+﻿{% extends "adminDashBoard.html" %}
+{% load static %}
+{% block title %}Event-wise Collections{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/assets/css/pagination.css">
+<style>
+  .subtabs { display:flex; gap:10px; }
+  .subtab { padding:9px 16px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; color:#1f2937; text-decoration:none; font-weight:600; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
+  .subtab.active { background:#94d600; color:#0f172a; box-shadow:0 6px 12px rgba(0,0,0,0.12); }
+
+  .surface {
+    background: var(--surface-bg);
+    border-radius: 16px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+    border: 1px solid var(--surface-border);
+    color: var(--surface-text);
+  }
+  .filter-card {
+    border-radius: 14px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-bg);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  }
+  .tx-row {
+    border: 1px solid var(--surface-border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    background: var(--surface-bg);
+    transition: all .2s ease;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    color: var(--surface-text);
+  }
+  .tx-row:hover { box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12); transform: translateY(-2px); }
+  .tx-title { font-weight: 700; font-size: 15px; color: var(--surface-text); }
+  .tx-meta { font-size: 13px; color: var(--muted-text); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; border: 1px solid transparent; }
+  .chip-info { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+  .chip-status { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+  .chip-amount { background: #ecfdf3; color: #166534; border-color: #bbf7d0; }
+  .mini-stat { background:#eef2ff; border:1px solid #c7d2fe; border-radius:12px; padding:10px 12px; text-align:right; }
+  .mini-stat .label { font-size:12px; color:#6b7280; }
+  .mini-stat .value { font-weight:800; font-size:16px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="subtabs mb-3">
+    <a class="subtab" href="/reports/admin/collections/">Total Collections</a>
+    <a class="subtab active" href="/reports/admin/events/">Event-wise Collections</a>
+  </div>
+
+  <h3 class="fw-bold mb-3">Event-wise Collections</h3>
+
+  <div class="card filter-card mb-3 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Search Event</label>
+          <input type="text" id="eventSearch" placeholder="Search by title" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Status</label>
+          <select id="eventStatus" class="form-select">
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button class="btn btn-core-apply" id="applyFilters">Apply</button>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button class="btn btn-core-reset" id="resetFilters">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventsList" class="d-grid gap-3"></div>
+  <div class="d-flex justify-content-center mt-2">
+    <nav>
+      <ul id="eventsPagination" class="pagination justify-content-center"></ul>
+    </nav>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
+<script>
+const fmtMoney = (val) => Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let eventsPage = 1;
+const pageSize = 5;
+
+function buildRow(r){
+  return `
+    <div class="tx-row">
+      <div class="row g-3 align-items-center">
+        <div class="col-lg-6 col-md-7">
+          <div class="tx-title">${r.title || ''}</div>
+          <div class="tx-meta d-flex gap-3 flex-wrap align-items-center">
+            <span><i class="fas fa-calendar-alt"></i> ${r.event_date || ''}</span>
+            <span><i class="fas fa-user"></i> ${r.organizer_name || ''}</span>
+            <span class="chip chip-info"><i class="fas fa-tag"></i> ${r.category || 'NA'}</span>
+            <span class="chip chip-status"><i class="fas fa-circle"></i> ${r.status || ''}</span>
+            <span class="tx-meta"><i class="fas fa-users"></i> ${r.participants || r.participants_count || 0} participants</span>
+          </div>
+        </div>
+        <div class="col-lg-6 col-md-5">
+          <div class="d-flex gap-2 justify-content-end flex-wrap">
+            <div class="mini-stat">
+              <div class="label">Expected</div>
+              <div class="value">₹${fmtMoney(r.event_amount || 0)}</div>
+            </div>
+            <div class="mini-stat">
+              <div class="label">Collected</div>
+              <div class="value">₹${fmtMoney(r.collected_amount || 0)}</div>
+            </div>
+            <div class="mini-stat">
+              <div class="label">Pending</div>
+              <div class="value">₹${fmtMoney(r.pending_amount || 0)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function loadEvents() {
+  const params = new URLSearchParams({
+    pageNo: eventsPage,
+    pageSize,
+    search: document.getElementById('eventSearch').value || '',
+    status: document.getElementById('eventStatus').value || '',
+  });
+  const res = await fetch(`/api/v1/admin/reports/events/?${params.toString()}`, {
+    headers: authHeaders({ 'Accept': 'application/json' }),
+    credentials:'same-origin'
+  });
+  const container = document.getElementById('eventsList');
+  if (!res.ok) {
+    container.innerHTML = '<div class="text-muted p-3">Could not load events</div>';
+    return;
+  }
+  const json = await res.json();
+  console.log('Events report response', json);
+  const rows = json.Data || [];
+  const totalPages = json.TotalPages || 1;
+  const totalRecords = json.TotalRecord || rows.length;
+  container.innerHTML = rows.length ? rows.map(buildRow).join('') : '<div class="text-muted p-3">No events found</div>';
+  renderPagination('eventsPagination', eventsPage, totalPages, (p)=>{ eventsPage=p; loadEvents(); });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('applyFilters').onclick = () => { eventsPage = 1; loadEvents(); };
+  document.getElementById('resetFilters').onclick = () => {
+    document.getElementById('eventSearch').value = '';
+    document.getElementById('eventStatus').value = '';
+    eventsPage = 1; loadEvents();
+  };
+  loadEvents();
+});
+</script>
+{% endblock %}

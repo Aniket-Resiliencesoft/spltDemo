@@ -1,0 +1,284 @@
+﻿{% extends "adminDashBoard.html" %}
+{% load static %}
+{% block title %}Total Collections{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css">
+<style>
+  .subtabs { display:flex; gap:10px; }
+  .subtab { padding:9px 16px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; color:#1f2937; text-decoration:none; font-weight:600; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
+  .subtab.active { background:#94d600; color:#0f172a; box-shadow:0 6px 12px rgba(0,0,0,0.12); }
+
+  .surface {
+    background: var(--surface-bg);
+    border-radius: 16px;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+    border: 1px solid var(--surface-border);
+    color: var(--surface-text);
+  }
+  .filter-card {
+    border-radius: 14px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-bg);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  }
+  .summary-card {
+    background: var(--surface-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    color: var(--surface-text);
+  }
+  .summary-card .label { color: var(--muted-text); font-size: 13px; }
+  .summary-card .value { font-size: 22px; font-weight: 800; margin-top: 4px; }
+  .chart-card { background: var(--surface-bg); border:1px solid var(--surface-border); border-radius:12px; padding:14px; box-shadow:0 10px 22px rgba(15,23,42,0.10); }
+  .chart-wrap { position:relative; height:260px; }
+  .chart-wrap-small { position:relative; height:200px; }
+  #loadingOverlay { position:fixed; inset:0; background:rgba(255,255,255,0.55); display:none; align-items:center; justify-content:center; z-index:1200; }
+  .spinner { width:38px; height:38px; border:4px solid #e5e7eb; border-top:4px solid #7b5cf0; border-radius:50%; animation:spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg);} }
+  .toast { position:fixed; bottom:24px; right:24px; background:#0f172a; color:#fff; padding:12px 16px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.25); display:none; }
+  .disabled-input { opacity: 0.6; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="loadingOverlay"><div class="spinner"></div></div>
+<div class="container-fluid mt-4">
+
+  <!-- Sub tabs -->
+  <div class="subtabs mb-3">
+    <a class="subtab active" href="/reports/admin/collections/">Total Collections</a>
+    <a class="subtab" href="/reports/admin/events/">Event-wise Collections</a>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-bold mb-0">Total Collections</h3>
+    <button class="btn btn-core-reset" id="exportBtn" style="min-width:110px;">Export CSV</button>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="card filter-card mb-3 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3" id="fromWrap">
+          <label class="form-label">From</label>
+          <input type="date" id="fromDate" class="form-control">
+        </div>
+        <div class="col-md-3" id="toWrap">
+          <label class="form-label">To</label>
+          <input type="date" id="toDate" class="form-control">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Interval</label>
+          <select id="interval" class="form-select">
+            <option value="day">Daily</option>
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button id="applyFilters" class="btn btn-core-apply">Apply</button>
+        </div>
+        <div class="col-md-2 d-grid">
+          <button id="resetFilters" class="btn btn-core-reset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="surface p-3 mb-3">
+    <div class="row g-3">
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Completed Collections</div><div class="value" id="sumCompleted">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Pending Collections</div><div class="value" id="sumPending">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Failed Payments</div><div class="value" id="sumFailed">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Total Events</div><div class="value" id="sumEvents">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Active Events</div><div class="value" id="sumActive">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Completed Events</div><div class="value" id="sumCompletedEvents">0</div></div>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <div class="summary-card"><div class="label">Cancelled Events</div><div class="value" id="sumCancelledEvents">0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-card mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="mb-0">Collections Trend</h5>
+      <small style="color:#6b7280;">Derived from summary API</small>
+    </div>
+    <div class="chart-wrap"><canvas id="collectionsChart"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="mb-0">Event Status Mix</h5>
+      <small style="color:#6b7280;">Active / Completed / Cancelled</small>
+    </div>
+    <div class="chart-wrap-small"><canvas id="statusChart"></canvas></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const fmtMoney = (val) => Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let collectionsChart; let statusChart;
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>{t.style.display='none';},2500); }
+function toggleLoading(show){ const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.style.display = show ? 'flex' : 'none'; }
+async function loadSummary(){
+  try{
+    toggleLoading(true);
+    const intervalSel = document.getElementById('interval').value || 'day';
+    const useDates = intervalSel === 'custom';
+    if(useDates && (!document.getElementById('fromDate').value || !document.getElementById('toDate').value)){
+      setDefaultDates();
+    }
+    const params=new URLSearchParams({
+      interval: intervalSel,
+      from: useDates ? (document.getElementById('fromDate').value || '') : '',
+      to: useDates ? (document.getElementById('toDate').value || '') : ''
+    });
+    const url = `/api/v1/admin/reports/summary/?${params.toString()}`;
+    const res=await fetch(url, { headers: authHeaders({'Accept':'application/json'}), credentials:'same-origin' });
+    toggleLoading(false);
+    const json = await handleResponse(res);
+    console.log('Summary response', json);
+    const data=json.Data || json.data || {};
+    const col=data.collections || data.Collections || {};
+    const ev=data.events || data.Events || {};
+    document.getElementById('sumCompleted').textContent=fmtMoney(col.completed_amount ?? col.completed ?? 0);
+    document.getElementById('sumPending').textContent=fmtMoney(col.pending_amount ?? col.pending ?? 0);
+    document.getElementById('sumFailed').textContent=col.failed_count ?? col.failed ?? 0;
+    document.getElementById('sumEvents').textContent=ev.total ?? 0;
+    document.getElementById('sumActive').textContent=ev.active ?? 0;
+    document.getElementById('sumCompletedEvents').textContent=ev.completed ?? 0;
+    document.getElementById('sumCancelledEvents').textContent=ev.cancelled ?? 0;
+    const trendArr = Array.isArray(col.trend) ? col.trend : Array.isArray(col.Trend) ? col.Trend : [];
+    renderTrend(trendArr);
+    renderStatus(ev);
+  }catch(err){
+    toggleLoading(false);
+    console.error('Summary load failed', err);
+    showToast(err.message || 'Something went wrong');
+  }
+}
+function renderTrend(trend){
+  const labels = trend.map(t => t.period);
+  const values = trend.map(t => t.amount);
+  const ctx = document.getElementById('collectionsChart').getContext('2d');
+  if (collectionsChart) collectionsChart.destroy();
+  collectionsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Completed Collections',
+        data: values,
+        tension: 0.35,
+        borderColor: '#7b5cf0',
+        backgroundColor: 'rgba(123,92,240,0.15)',
+        fill: true,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { display: true }, tooltip: { mode: 'index', intersect: false } }
+    }
+  });
+}
+function renderStatus(ev){
+  const ctx = document.getElementById('statusChart').getContext('2d');
+  const labels = ['Active', 'Completed', 'Cancelled'];
+  const dataArr = [ev.active || 0, ev.completed || 0, ev.cancelled || 0];
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Events',
+        data: dataArr,
+        backgroundColor: ['#22c55e', '#2563eb', '#ef4444']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+async function exportCsv(){
+  const body={ type:'collections', format:'csv', filters:{ interval:document.getElementById('interval').value||'day', from:document.getElementById('fromDate').value||'', to:document.getElementById('toDate').value||'' } };
+  const res=await fetch('/api/v1/admin/reports/export/',{
+    method:'POST',
+    headers: authHeaders(),
+    credentials:'same-origin',
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    showToast(`Export failed (HTTP ${res.status})`);
+    return;
+  }
+  showToast('Export job created');
+}
+function toggleDateVisibility(){
+  const interval = document.getElementById('interval').value;
+  const isCustom = interval === 'custom';
+  const fw=document.getElementById('fromWrap');
+  const tw=document.getElementById('toWrap');
+  const from=document.getElementById('fromDate');
+  const to=document.getElementById('toDate');
+  if(from){ from.disabled = !isCustom; from.classList.toggle('disabled-input', !isCustom); if(!isCustom) from.value=''; }
+  if(to){ to.disabled = !isCustom; to.classList.toggle('disabled-input', !isCustom); if(!isCustom) to.value=''; }
+  if(fw) fw.style.opacity = isCustom ? 1 : 0.6;
+  if(tw) tw.style.opacity = isCustom ? 1 : 0.6;
+  if(isCustom && (!from.value || !to.value)){ setDefaultDates(); }
+}
+function setDefaultDates(){
+  const today=new Date(); const prior=new Date(); prior.setDate(prior.getDate()-365);
+  const to=document.getElementById('toDate');
+  const from=document.getElementById('fromDate');
+  if(to) to.value=today.toISOString().slice(0,10);
+  if(from) from.value=prior.toISOString().slice(0,10);
+}
+function init(){
+  toggleDateVisibility();
+  loadSummary();
+  document.getElementById('applyFilters').onclick=()=>loadSummary();
+  document.getElementById('resetFilters').onclick=()=>{
+    document.getElementById('interval').value='day';
+    toggleDateVisibility();
+    loadSummary();
+  };
+  document.getElementById('interval').onchange=()=>toggleDateVisibility();
+  document.getElementById('exportBtn').onclick=exportCsv;
+}
+document.addEventListener('DOMContentLoaded', init);
+window.onload = init;
+</script>
+{% endblock %}
