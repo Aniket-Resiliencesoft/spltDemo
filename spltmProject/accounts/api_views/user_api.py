@@ -14,6 +14,7 @@ from accounts.serializer import (
 )
 from common.api.base_api import BaseAuthenticatedAPI
 from accounts.serializer import UserRoleCreateSerializer
+from common.responses import api_response_success, api_response_error
 
 class UserListAPI(BaseAuthenticatedAPI):
     """
@@ -69,13 +70,13 @@ class UserDetailAPI(APIView):
             # Fetch user by ID
             user = User.objects.get(id=user_id, is_active=True)
         except User.DoesNotExist:
-            return Response(
-                {"message": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
+            return api_response_error(
+                message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
         serializer = UserGetSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return api_response_success(data=serializer.data)
 
 class UserCreateAPI(APIView):
     """
@@ -99,12 +100,17 @@ class UserCreateAPI(APIView):
                 is_active=True
             )
 
-            return Response(
-                {"message": "User created successfully", "user_id": user.id},
-                status=status.HTTP_201_CREATED
+            return api_response_success(
+                data={"user_id": user.id},
+                message="User created successfully",
+                status_code=status.HTTP_201_CREATED
             )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return api_response_error(
+            message="Validation failed",
+            data=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
 
 class UserUpdateAPI(APIView):
     """
@@ -116,21 +122,25 @@ class UserUpdateAPI(APIView):
         try:
             user = User.objects.get(id=user_id, is_active=True)
         except User.DoesNotExist:
-            return Response(
-                {"message": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
+            return api_response_error(
+                message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
         serializer = UserUpdateSerializer(user, data=request.data)
 
         if serializer.is_valid():
             serializer.save()
-            return Response(
-                {"message": "User updated successfully"},
-                status=status.HTTP_200_OK
+            return api_response_success(
+                message="User updated successfully",
+                status_code=status.HTTP_200_OK
             )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return api_response_error(
+            message="Validation failed",
+            data=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
 
 
 class UserDeleteAPI(APIView):
@@ -144,18 +154,18 @@ class UserDeleteAPI(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response(
-                {"message": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
+            return api_response_error(
+                message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
         # Soft delete
         user.is_active = False
         user.save()
 
-        return Response(
-            {"message": "User deleted successfully"},
-            status=status.HTTP_200_OK
+        return api_response_success(
+            message="User deleted successfully",
+            status_code=status.HTTP_200_OK
         )
 
 
@@ -176,7 +186,11 @@ class AssignUserRoleAPI(BaseAuthenticatedAPI):
         # Step 2: Validate input (user_id, role_id)
         serializer = UserRoleCreateSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return api_response_error(
+                message="Validation failed",
+                data=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         user_id = serializer.validated_data['user'].id
         role_id = serializer.validated_data['role'].id
@@ -185,18 +199,18 @@ class AssignUserRoleAPI(BaseAuthenticatedAPI):
         try:
             user = User.objects.get(id=user_id, is_active=True)
         except User.DoesNotExist:
-            return Response(
-                {"message": "User not found"},
-                status=status.HTTP_404_NOT_FOUND
+            return api_response_error(
+                message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
         # Step 4: Validate role existence
         try:
             role = Role.objects.get(id=role_id, is_active=True)
         except Role.DoesNotExist:
-            return Response(
-                {"message": "Role not found"},
-                status=status.HTTP_404_NOT_FOUND
+            return api_response_error(
+                message="Role not found",
+                status_code=status.HTTP_404_NOT_FOUND
             )
 
         # Step 5: Deactivate existing roles for user
@@ -212,7 +226,7 @@ class AssignUserRoleAPI(BaseAuthenticatedAPI):
             is_active=True
         )
 
-        return Response(
-            {"message": "Role assigned to user successfully"},
-            status=status.HTTP_200_OK
+        return api_response_success(
+            message="Role assigned to user successfully",
+            status_code=status.HTTP_200_OK
         )

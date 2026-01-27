@@ -1,5 +1,6 @@
 from django.urls import path
 from accounts.api_views.auth_api import LoginAPI, OTPGenerateAPI, OTPVerifyAPI
+from accounts.api_views.dashboard_api import DashboardStatsAPI
 
 from accounts.api_views.user_api import (
     AssignUserRoleAPI,
@@ -44,8 +45,15 @@ urlpatterns += [
     path('api/users/assign-role/', AssignUserRoleAPI.as_view()),
 ]
 
+urlpatterns += [
+    path('api/dashboard/stats/', DashboardStatsAPI.as_view()),
+]
+
 urlpatterns +=[
     path('login/',ui_views.login_view),
+    path('register/', ui_views.register_view, name='register'),
+    path('verify-otp/', ui_views.verify_otp_view, name='verify_otp'),
+    path('dashboard/', ui_views.dashboard_view, name='dashboard'),
     path('api/auth/generateOTP',OTPGenerateAPI.as_view()),
     path('api/auth/verifyOTP',OTPVerifyAPI.as_view()),
     path('logout/', ui_views.logout_view, name='logout'),

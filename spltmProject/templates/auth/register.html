@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Login</title>
+  <title>Register</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -166,7 +166,7 @@
       }
     }
 
-    /* Right Side - Login Form */
+    /* Right Side - Register Form */
     .right-side {
       flex: 1;
       display: flex;
@@ -174,31 +174,32 @@
       justify-content: center;
       background: #f8f9fa;
       padding: 40px;
+      overflow-y: auto;
     }
 
-    .login-container {
+    .register-container {
       width: 100%;
       max-width: 450px;
     }
 
-    .login-header {
+    .register-header {
       text-align: center;
       margin-bottom: 40px;
     }
 
-    .login-header h2 {
+    .register-header h2 {
       font-size: 32px;
       font-weight: 700;
       color: #333;
       margin-bottom: 10px;
     }
 
-    .login-header p {
+    .register-header p {
       color: #666;
       font-size: 16px;
     }
 
-    .login-form {
+    .register-form {
       background: white;
       padding: 40px;
       border-radius: 20px;
@@ -233,7 +234,7 @@
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
-    .btn-login {
+    .btn-register {
       width: 100%;
       padding: 14px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -247,13 +248,38 @@
       margin-top: 10px;
     }
 
-    .btn-login:hover {
+    .btn-register:hover {
       transform: translateY(-2px);
       box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
     }
 
-    .btn-login:active {
+    .btn-register:active {
       transform: translateY(0);
+    }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 25px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .form-footer a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .form-footer a:hover {
+      color: #764ba2;
+    }
+
+    .error-message {
+      color: #e74c3c;
+      font-size: 13px;
+      margin-top: 5px;
+      display: none;
     }
 
     /* Loader */
@@ -345,32 +371,46 @@
       </div>
     </div>
 
-    <!-- Right Side - Login Form -->
+    <!-- Right Side - Register Form -->
     <div class="right-side">
-      <div class="login-container">
-        <div class="login-header">
-          <h2>Welcome Back</h2>
-          <p>Please login to your account</p>
+      <div class="register-container">
+        <div class="register-header">
+          <h2>Create Account</h2>
+          <p>Join us and start managing expenses</p>
         </div>
 
-        <div class="login-form">
-          <form id="loginForm">
+        <div class="register-form">
+          <form id="registerForm">
             {% csrf_token %}
+
+            <div class="form-group">
+              <label for="full_name">Full Name</label>
+              <input type="text" name="full_name" id="full_name" placeholder="Enter your full name" required>
+              <div class="error-message" id="full_name_error"></div>
+            </div>
 
             <div class="form-group">
               <label for="email">Email Address</label>
               <input type="email" name="email" id="email" placeholder="Enter your email" required>
+              <div class="error-message" id="email_error"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="contact_no">Contact Number</label>
+              <input type="tel" name="contact_no" id="contact_no" placeholder="Enter your contact number" required>
+              <div class="error-message" id="contact_no_error"></div>
             </div>
 
             <div class="form-group">
               <label for="password">Password</label>
               <input type="password" name="password" id="password" placeholder="Enter your password" required>
+              <div class="error-message" id="password_error"></div>
             </div>
 
-            <button type="submit" class="btn-login">Login</button>
+            <button type="submit" class="btn-register">Register</button>
 
-            <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
-              Don't have an account? <a href="/register/" style="color: #667eea; text-decoration: none; font-weight: 600;">Register here</a>
+            <div class="form-footer">
+              Already have an account? <a href="/login/">Login here</a>
             </div>
           </form>
         </div>
@@ -404,70 +444,62 @@
         return;
       }
 
-      $("#loginForm").on("submit", function (e) {
+      $("#registerForm").on("submit", function (e) {
         e.preventDefault();
-
-        const email = $("input[name='email']").val();
-        const password = $("input[name='password']").val();
-        const appKey = 1;
         
-        if (!email || !password) {
-          showErrorToast("Email and password are required");
+        // Clear previous errors
+        document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+
+        const fullName = $("input[name='full_name']").val().trim();
+        const email = $("input[name='email']").val().trim();
+        const contactNo = $("input[name='contact_no']").val().trim();
+        const password = $("input[name='password']").val();
+        
+        if (!fullName || !email || !contactNo || !password) {
+          showErrorToast("All fields are required");
           return;
         }
 
         $.ajax({
-          url: "/api/auth/login/",
+          url: "/api/users/create/",
           type: "POST",
           contentType: "application/json",
           headers: {
             "X-CSRFToken": getCSRFToken()
           },
           data: JSON.stringify({
+            full_name: fullName,
             email: email,
-            password: password,
-            appKey: appKey
+            contact_no: contactNo,
+            password: password
           }),
           success: function (response) {
-            // Handle new API response format: {IsSuccess, Message, Data}
-            if (response.IsSuccess && response.Data) {
-              const tokenData = response.Data;
-              
-              // Check if this is admin login (has access_token directly) or OTP flow
-              if (tokenData.access_token) {
-                // Direct login (Admin)
-                setCookie("access_token", tokenData.access_token, 1);
-                setCookie("user_role", tokenData.user.role, 1);
-                setCookie("user_name", tokenData.user.full_name, 1);
-                setCookie("user_email", tokenData.user.email, 1);
-                setCookie("user_id", tokenData.user.id, 1);
-                
-                localStorage.setItem("access_token", tokenData.access_token);
-                localStorage.setItem("user_role", tokenData.user.role);
-                localStorage.setItem("user_name", tokenData.user.full_name);
-                localStorage.setItem("user_email", tokenData.user.email);
-                localStorage.setItem("user_id", tokenData.user.id);
-                
-                showSuccessToast("Login successful! Redirecting...");
-                setTimeout(() => {
-                  window.location.href = "{% url 'dashboard' %}";
-                }, 1500);
-              } else if (tokenData.otp_generated) {
-                // OTP flow (Non-Admin)
-                localStorage.setItem("otp_user_id", tokenData.user_id);
-                localStorage.setItem("otp_email", tokenData.email);
-                showInfoToast("OTP sent to your email. Redirecting...");
-                setTimeout(() => {
-                  window.location.href = "/verify-otp/";
-                }, 1500);
-              }
+            if (response.IsSuccess) {
+              showSuccessToast("Registration successful! Redirecting to login...");
+              setTimeout(() => {
+                window.location.href = "/login/";
+              }, 2000);
             } else {
-              showErrorToast(response.Message || "Login failed");
+              showErrorToast(response.Message || "Registration failed");
             }
           },
           error: function (xhr) {
             const errorMessage = getErrorMessage(xhr);
             showErrorToast(errorMessage);
+            
+            // Also display field-specific errors if validation failed
+            if (xhr.responseJSON && xhr.responseJSON.Data && typeof xhr.responseJSON.Data === 'object') {
+              const errors = xhr.responseJSON.Data;
+              for (let field in errors) {
+                if (errors.hasOwnProperty(field)) {
+                  const errorEl = document.getElementById(field + '_error');
+                  if (errorEl) {
+                    errorEl.textContent = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+                    errorEl.style.display = 'block';
+                  }
+                }
+              }
+            }
           }
         });
       });
