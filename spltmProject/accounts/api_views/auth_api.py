@@ -41,7 +41,9 @@ class LoginAPI(APIView):
     """
     POST:
     - ADMIN: Direct JWT login
-    - NON-ADMIN: OTP generation
+    - NON-ADMIN:
+        - email_verified = True → Direct JWT login
+        - email_verified = False → OTP generation
     """
 
     def post(self, request):
@@ -62,7 +64,11 @@ class LoginAPI(APIView):
         # Validate user
         # --------------------------------------------------
         try:
-            user = User.objects.get(email=email, is_active=True, status=1)
+            user = User.objects.get(
+                email=email,
+                is_active=True,
+                status=1
+            )
         except User.DoesNotExist:
             return auth_response(
                 False,
@@ -118,16 +124,18 @@ class LoginAPI(APIView):
             )
 
         # --------------------------------------------------
-        # Non-admin OTP flow
+        # Non-admin direct login if email already verified
         # --------------------------------------------------
-        # Check if email is already verified
         if user.email_verified:
-            return auth_response(
-                False,
-                "Email already verified. Please login directly.",
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
-        
+             return auth_response(
+                    True,
+                    "Login successful",
+                    self._generate_token(user, role_name)
+                )
+
+        # --------------------------------------------------
+        # Non-admin OTP flow (email NOT verified)
+        # --------------------------------------------------
         otp = user.generate_otp()
 
         email_result = send_otp_email(
@@ -153,7 +161,7 @@ class LoginAPI(APIView):
     # --------------------------------------------------
     def _generate_token(self, user, role_name):
         payload = {
-            "user_id": user.id,
+            "user_id": str(user.id),  # UUID safe
             "username": user.email,
             "role": role_name,
             "iat": datetime.utcnow(),
@@ -179,7 +187,7 @@ class LoginAPI(APIView):
                 "role": role_name
             }
         }
-
+    
 
 # ==========================================================
 # OTP GENERATE API

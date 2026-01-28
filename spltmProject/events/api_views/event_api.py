@@ -350,3 +350,60 @@ class EventSummaryAPI(BaseAuthenticatedAPI):
             data=serializer.data,
             message="Event summary retrieved successfully"
         )
+
+
+class EventShareLinkAPI(BaseAuthenticatedAPI):
+    """
+    GET: Generate a shareable URL for an event
+    The URL includes event ID and pre-calculated per-person amount
+    
+    Response:
+    {
+        "IsSuccess": true,
+        "Data": {
+            "event_id": 123,
+            "event_title": "Birthday Party",
+            "share_link": "http://domain.com/join/event/?event_id=123&amount=500.00",
+            "per_person_amount": 500.00,
+            "total_amount": 2500.00,
+            "persons_count": 5
+        }
+    }
+    """
+    
+    def get(self, request, event_id):
+        # Check authentication
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+        
+        try:
+            # Get the event
+            event = Event.objects.get(id=event_id, is_active=True)
+        except Event.DoesNotExist:
+            return self.error_response(
+                message="Event not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Import utility function
+        from events.utils import generate_event_share_url
+        
+        # Generate share URL
+        share_data = generate_event_share_url(event, request=request)
+        
+        # Return success response
+        return self.success_response(
+            data={
+                'event_id': share_data['event_id'],
+                'event_title': share_data['event_title'],
+                'share_link': share_data['share_link'],
+                'relative_link': share_data['relative_url'],
+                'per_person_amount': float(share_data['per_person_amount']),
+                'total_amount': float(share_data['total_amount']),
+                'persons_count': share_data['persons_count'],
+                'event_category': share_data['event_category'],
+            },
+            message="Event share link generated successfully"
+        )
+

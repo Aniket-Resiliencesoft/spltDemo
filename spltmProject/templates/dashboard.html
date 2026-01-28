@@ -1,22 +1,11 @@
+{% extends "adminDashBoard.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>Dashboard - SplitMoney</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  
-  <link rel="icon" href="{% static 'assets/images/favicon.svg' %}" type="image/x-icon">
-  <link rel="stylesheet" href="{% static 'assets/fonts/inter/inter.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/fonts/tabler-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/fonts/feather.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/fonts/fontawesome.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/fonts/material.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
 
-  <style>
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<style>
     * {
       margin: 0;
       padding: 0;
@@ -208,9 +197,7 @@
       }
     }
   </style>
-</head>
 
-<body>
   <!-- Pre Loader -->
   <div class="loader-bg">
     <div class="loader-track"></div>
@@ -232,15 +219,14 @@
       <div class="skeleton-card skeleton"></div>
       <div class="skeleton-card skeleton"></div>
       <div class="skeleton-card skeleton"></div>
+      <div class="skeleton-card skeleton"></div>
     </div>
   </div>
 
-  <!-- JS -->
-  <script src="{% static 'assets/js/plugins/popper.min.js' %}"></script>
-  <script src="{% static 'assets/js/plugins/bootstrap.min.js' %}"></script>
-  <script src="{% static 'assets/js/toast.js' %}"></script>
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+{% endblock %}
 
+{% block extra_js %}
+  <script src="{% static 'assets/js/toast.js' %}"></script>
   <script>
     // Hide loader after page loads
     window.addEventListener('load', function() {
@@ -254,8 +240,9 @@
 
     $(document).ready(function () {
       // Check if user is authenticated
-      const token = getCookie('access_token') || localStorage.getItem('access_token');
-      const userName = getCookie('user_name') || localStorage.getItem('user_name');
+      const token = getCookie('access_token') 
+      const userName = getCookie('user_name') 
+
 
       if (!token) {
         showErrorToast("Session expired. Please login again.");
@@ -273,72 +260,136 @@
     });
 
     function fetchDashboardStats() {
+      const token = getCookie('access_token');
+      
+      if (!token) {
+        console.error("No token found!");
+        alert("No authentication token. Please login again.");
+        window.location.href = "/login/";
+        return;
+      }
+
       $.ajax({
         url: "/api/dashboard/stats/",
         type: "GET",
         contentType: "application/json",
         headers: {
           "X-CSRFToken": getCSRFToken(),
-          "Authorization": "Bearer " + (getCookie('access_token') || localStorage.getItem('access_token'))
+          "Authorization": "Bearer " + token
         },
         success: function (response) {
           if (response.IsSuccess && response.Data) {
             displayStats(response.Data);
           } else {
-            showErrorToast(response.Message || "Failed to load dashboard");
+            const msg = response.Message || "Failed to load dashboard";
+            console.error("API returned error:", msg);
+            if (typeof showErrorToast === 'function') {
+              showErrorToast(msg);
+            } else {
+              alert(msg);
+            }
           }
         },
         error: function (xhr) {
+          console.error("Error fetching dashboard stats:", xhr.status, xhr.responseText);
+          let errorMsg = "Failed to load dashboard";
+          
           if (xhr.status === 401) {
-            showErrorToast("Session expired. Please login again.");
+            errorMsg = "Session expired. Please login again.";
+            if (typeof showErrorToast === 'function') {
+              showErrorToast(errorMsg);
+            } else {
+              alert(errorMsg);
+            }
             setTimeout(() => {
               window.location.href = "/login/";
             }, 2000);
           } else {
-            const errorMessage = getErrorMessage(xhr);
-            showErrorToast(errorMessage);
+            try {
+              const responseData = JSON.parse(xhr.responseText);
+              errorMsg = responseData.Message || responseData.message || errorMsg;
+            } catch (e) {
+              errorMsg = xhr.statusText || "Failed to load dashboard";
+            }
+            console.error("Final error message:", errorMsg);
+            if (typeof showErrorToast === 'function') {
+              showErrorToast(errorMsg);
+            } else {
+              alert(errorMsg);
+            }
           }
         }
       });
     }
 
     function displayStats(data) {
-      const statsHTML = `
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <div class="stat-card-title">Total Users</div>
-            <div class="stat-card-icon">
-              <i class="ti ti-users"></i>
-            </div>
-          </div>
-          <div class="stat-card-value">${data.total_users}</div>
-          <div class="stat-card-label">Active users in system</div>
-        </div>
+      console.log("Displaying stats data:", data);
+      
+      if (!data) {
+        console.error("No data provided to displayStats");
+        if (typeof showErrorToast === 'function') {
+          showErrorToast("No data available to display");
+        }
+        return;
+      }
 
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <div class="stat-card-title">Active Events</div>
-            <div class="stat-card-icon">
-              <i class="ti ti-calendar-event"></i>
+      try {
+        const statsHTML = `
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-title">Total Users</div>
+              <div class="stat-card-icon">
+                <i class="ti ti-users"></i>
+              </div>
             </div>
+            <div class="stat-card-value">${data.total_users || 0}</div>
+            <div class="stat-card-label">Active users in system</div>
           </div>
-          <div class="stat-card-value">${data.active_events}</div>
-          <div class="stat-card-label">Ongoing and draft events</div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-card-header">
-            <div class="stat-card-title">Total Payment</div>
-            <div class="stat-card-icon">
-              <i class="ti ti-currency-rupee"></i>
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-title">Active Events</div>
+              <div class="stat-card-icon">
+                <i class="ti ti-calendar-event"></i>
+              </div>
             </div>
+            <div class="stat-card-value">${data.active_events || 0}</div>
+            <div class="stat-card-label">Ongoing and draft events</div>
           </div>
-          <div class="stat-card-value">₹<span class="stat-card-unit">${formatCurrency(data.total_payment)}</span></div>
-          <div class="stat-card-label">Total collected amount</div>
-        </div>
-      `;
 
-      $('#statsGrid').html(statsHTML);
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-title">Total Payment</div>
+              <div class="stat-card-icon">
+                <i class="ti ti-currency-rupee"></i>
+              </div>
+            </div>
+            <div class="stat-card-value">₹<span class="stat-card-unit">${formatCurrency(data.total_payment || 0)}</span></div>
+            <div class="stat-card-label">Total collected amount</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-header">
+              <div class="stat-card-title">Pending Payment</div>
+              <div class="stat-card-icon">
+                <i class="ti ti-hourglass"></i>
+              </div>
+            </div>
+            <div class="stat-card-value">₹<span class="stat-card-unit">${formatCurrency(data.pending_payment || 0)}</span></div>
+            <div class="stat-card-label">Amount awaiting confirmation</div>
+          </div>
+        `;
+
+        $('#statsGrid').html(statsHTML);
+        console.log("Stats displayed successfully");
+      } catch (error) {
+        console.error("Error displaying stats:", error);
+        if (typeof showErrorToast === 'function') {
+          showErrorToast("Error displaying dashboard data");
+        } else {
+          alert("Error displaying dashboard data: " + error.message);
+        }
+      }
     }
 
     function formatCurrency(amount) {
@@ -361,16 +412,6 @@
       return cookieValue;
     }
 
-    function setCookie(name, value, hours) {
-      let expires = "";
-      if (hours) {
-        const date = new Date();
-        date.setTime(date.getTime() + (hours * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-      }
-      document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
-    }
-
     function getCookie(name) {
       const nameEQ = name + "=";
       const ca = document.cookie.split(';');
@@ -383,5 +424,4 @@
       return null;
     }
   </script>
-</body>
-</html>
+{% endblock %}

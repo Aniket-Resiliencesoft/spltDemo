@@ -10,16 +10,16 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from django.conf import settings
 import logging
-
+import os
 logger = logging.getLogger(__name__)
 
 # Email Configuration
 EMAIL_CONFIG = {
-    "SmtpServer": "smtp.gmail.com",
-    "SmtpPort": 587,
-    "Username": "aniket.kum242@gmail.com",
-    "Password": "lhhx dsxb domz zbuk",
-    "DefaultFrom": "aniket.kum242@gmail.com"
+    "SmtpServer": os.getenv("SMTP_SERVER"),
+    "SmtpPort": int(os.getenv("SMTP_PORT", 587)),
+    "Username": os.getenv("SMTP_USERNAME"),
+    "Password": os.getenv("SMTP_PASSWORD"),
+    "DefaultFrom": os.getenv("SMTP_FROM"),
 }
 
 

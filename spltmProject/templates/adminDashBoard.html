@@ -656,51 +656,83 @@ $(document).ready(function() {
 
 // Function to load dashboard statistics
 function loadDashboardStats() {
-  // TODO: Replace with actual API calls
-  // Example API structure:
-  $.ajax({
-    url: '/api/stats/users/',
-    method: 'GET',
-    success: function(data) {
-      animateCounter($('#usersCount'), data.count || 0);
-    },
-    error: function() {
-      $('#usersCount').html('--');
-    }
-  });
+  const token = getCookie('access_token') || localStorage.getItem('access_token');
+  
+  if (!token) {
+    console.error("No authentication token found");
+    return;
+  }
 
+  // Call the unified dashboard stats API
   $.ajax({
-    url: '/api/stats/events/',
+    url: '/api/dashboard/stats/',
     method: 'GET',
-    success: function(data) {
-      animateCounter($('#eventsCount'), data.count || 0);
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'X-CSRFToken': getCSRFToken()
     },
-    error: function() {
-      $('#eventsCount').html('--');
+    success: function(response) {
+      
+      if (response.IsSuccess && response.Data) {
+        const data = response.Data;
+        
+        // Update dashboard stat cards
+        if ($('#usersCount').length) {
+          animateCounter($('#usersCount'), data.total_users || 0);
+        }
+        if ($('#eventsCount').length) {
+          animateCounter($('#eventsCount'), data.active_events || 0);
+        }
+        if ($('#paymentsCount').length) {
+          animateCounter($('#paymentsCount'), Math.round(data.total_payment || 0));
+        }
+        
+        // Log pending payment for reference
+        console.log("Pending payments:", data.pending_payment || 0);
+      }
+    },
+    error: function(xhr) {
+      console.error("Error loading dashboard stats:", xhr.status, xhr.responseText);
+      
+      // Set fallback values
+      if ($('#usersCount').length) {
+        $('#usersCount').html('--');
+      }
+      if ($('#eventsCount').length) {
+        $('#eventsCount').html('--');
+      }
+      if ($('#paymentsCount').length) {
+        $('#paymentsCount').html('--');
+      }
     }
   });
+}
 
-  $.ajax({
-    url: '/api/stats/vendors/',
-    method: 'GET',
-    success: function(data) {
-      animateCounter($('#vendorsCount'), data.count || 0);
-    },
-    error: function() {
-      $('#vendorsCount').html('--');
+// Helper function to get CSRF token
+function getCSRFToken() {
+  let cookieValue = null;
+  let cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    let cookie = cookies[i].trim();
+    if (cookie.startsWith('csrftoken=')) {
+      cookieValue = cookie.substring('csrftoken='.length);
+      break;
     }
-  });
+  }
+  return cookieValue;
+}
 
-  $.ajax({
-    url: '/api/stats/payments/',
-    method: 'GET',
-    success: function(data) {
-      animateCounter($('#paymentsCount'), data.count || 0);
-    },
-    error: function() {
-      $('#paymentsCount').html('--');
+// Helper function to get cookie by name
+function getCookie(name) {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i].trim();
+    if (c.indexOf(nameEQ) === 0) {
+      return decodeURIComponent(c.substring(nameEQ.length));
     }
-  });
+  }
+  return null;
 }
 
 // Counter animation

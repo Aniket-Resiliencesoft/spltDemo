@@ -1,0 +1,337 @@
+{% extends "adminDashBoard.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="/static/assets/css/pagination.css">
+
+<style>
+.filter-card {
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+  background: linear-gradient(180deg, #efefef, rgba(255, 255, 255, 0) 100%);
+}
+
+.user-row {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 14px 18px;
+  background: #fff;
+  transition: all .2s ease;
+}
+
+.user-row:hover {
+  box-shadow: 0 10px 22px rgba(0,0,0,.06);
+  transform: translateY(-2px);
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.user-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.btn-primary {
+  background-color: #94d600 !important;
+  border-color: #94d600 !important;
+}
+
+.btn-primary:hover {
+  background-color: #7ab800 !important;
+  border-color: #7ab800 !important;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Users</h3>
+  </div>
+
+  <!-- =====================
+       FILTER BAR
+  ====================== -->
+  <div class="card filter-card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+
+        <div class="col-md-3">
+          <label class="form-label">Name</label>
+          <input type="text" id="filter-name" class="form-control"
+                 placeholder="Search by name">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Email</label>
+          <input type="text" id="filter-email" class="form-control"
+                 placeholder="Search by email">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Active</label>
+          <select id="filter-active" class="form-select">
+            <option value="">All</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button id="apply-filter" class="btn btn-primary">
+            <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================
+       USER LIST
+  ====================== -->
+  <div id="users-container">
+
+    <div id="users-list" class="d-grid gap-3"></div>
+
+    <!-- PAGINATION INFO -->
+    <div class="pagination-info" id="pagination-info"></div>
+
+    <!-- PAGINATION CONTROLS -->
+    <nav>
+      <ul id="users-pagination" class="pagination justify-content-center"></ul>
+    </nav>
+
+  </div>
+
+  <!-- =====================
+       USER DETAILS
+  ====================== -->
+  <div id="user-details" class="card shadow-lg mt-4 d-none border-0">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h4 id="detail-name" class="fw-bold"></h4>
+          <small id="detail-email" class="text-muted"></small>
+        </div>
+        <button id="close-details" class="btn btn-outline-secondary btn-sm">
+          Close
+        </button>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Contact:</strong> <span id="detail-contact"></span></p>
+          <p><strong>Status:</strong> <span id="detail-status"></span></p>
+          <p><strong>Active:</strong> <span id="detail-active"></span></p>
+        </div>
+
+        <div class="col-md-6">
+          <p><strong>Created At:</strong> <span id="detail-created"></span></p>
+          <p><strong>Updated At:</strong> <span id="detail-updated"></span></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
+<script>
+/* =====================
+   CONFIG
+===================== */
+const URLS = {
+  LIST: '/api/users/'
+};
+
+let currentPage = 1;
+const pageSize = 10;
+
+/* =====================
+   FETCH UTIL
+===================== */
+async function fetchJSON(url, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const finalUrl = qs ? `${url}?${qs}` : url;
+
+  const res = await fetch(finalUrl, {
+    headers: { 'Accept': 'application/json' },
+    credentials: 'same-origin'
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+/* =====================
+   DATA FUNCTIONS
+===================== */
+async function fetchUsers() {
+  const nameVal = $('#filter-name').val() || '';
+  const emailVal = $('#filter-email').val() || '';
+  const searchVal = (nameVal + ' ' + emailVal).trim();
+  
+  const resp = await fetchJSON(URLS.LIST, {
+    pageNo: currentPage,
+    pageSize,
+    search: searchVal
+  });
+
+  return resp?.data || resp?.Data || [];
+}
+
+/* =====================
+   RENDER FUNCTIONS
+===================== */
+function renderUserList(users) {
+  const $list = $('#users-list').empty();
+
+  if (!users.length) {
+    $list.html('<div class="text-muted p-4">No users found</div>');
+    return;
+  }
+
+  users.forEach(u => {
+    $list.append(`
+      <div class="user-row" data-id="${u.id}">
+        <div class="row align-items-center">
+
+          <div class="col-md-3">
+            <div class="user-name">${u.full_name}</div>
+            <div class="user-meta">${u.email}</div>
+          </div>
+
+          <div class="col-md-2">
+            📞 ${u.contact_no || '-'}
+          </div>
+
+          <div class="col-md-2">
+            ${u.is_active
+              ? '<span class="badge bg-success">Active</span>'
+              : '<span class="badge bg-danger">Inactive</span>'}
+          </div>
+
+          <div class="col-md-3 user-meta">
+            Created: ${formatDate(u.created_at)}
+          </div>
+
+          <div class="col-md-2 text-end">
+            <button class="btn btn-sm btn-outline-primary view-user">
+              View
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `);
+  });
+
+  $('#pagination-info').text(`Page ${currentPage}`);
+}
+
+function renderUserDetails(user) {
+  $('#detail-name').text(user.full_name);
+  $('#detail-email').text(user.email);
+  $('#detail-contact').text(user.contact_no || '-');
+  $('#detail-status').text(user.status);
+  $('#detail-active').text(user.is_active ? 'Yes' : 'No');
+  $('#detail-created').text(formatDate(user.created_at));
+  $('#detail-updated').text(formatDate(user.updated_at));
+
+  $('#users-container').addClass('d-none');
+  $('#user-details').removeClass('d-none')
+    .get(0).scrollIntoView({ behavior: 'smooth' });
+}
+
+/* =====================
+   CONTROLLER
+===================== */
+async function loadUsers() {
+  try {
+    const nameVal = $('#filter-name').val() || '';
+    const emailVal = $('#filter-email').val() || '';
+    const searchVal = (nameVal + ' ' + emailVal).trim();
+    
+    const resp = await fetchJSON(URLS.LIST, {
+      pageNo: currentPage,
+      pageSize,
+      search: searchVal
+    });
+    
+    const users = resp?.data || resp?.Data || [];
+    const totalPages = resp?.TotalPages || 1;
+    const totalRecords = resp?.TotalRecord || 0;
+    
+    renderUserList(users);
+    
+    // Display pagination info
+    if (totalRecords > 0) {
+      $('#pagination-info').text(`Page ${currentPage} of ${totalPages} (Total: ${totalRecords} users)`);
+    }
+    
+    // Cache for details view
+    cachedUsers = users;
+    
+    // Render pagination controls
+    displayPaginationInfo('pagination-info', currentPage, totalPages, totalRecords);
+    renderPagination('users-pagination', currentPage, totalPages, (page) => {
+      currentPage = page;
+      loadUsers();
+    });
+  } catch (err) {
+    console.error('Error loading users:', err);
+    $('#users-list').html('<div class="text-danger p-4">Error loading users</div>');
+  }
+}
+
+function openUserDetails(userId) {
+  const user = cachedUsers.find(u => u.id === userId);
+  if (user) renderUserDetails(user);
+}
+
+/* =====================
+   HELPERS
+===================== */
+let cachedUsers = [];
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
+/* =====================
+   EVENTS
+===================== */
+$(function () {
+
+  loadUsers();
+
+  $('#apply-filter').click(() => {
+    currentPage = 1;
+    loadUsers();
+  });
+
+  $('#users-list').on('click', '.view-user', function () {
+    const id = $(this).closest('.user-row').data('id');
+    openUserDetails(id);
+  });
+
+  $('#close-details').click(() => {
+    $('#user-details').addClass('d-none');
+    $('#users-container').removeClass('d-none');
+  });
+
+});
+</script>
+{% endblock %}

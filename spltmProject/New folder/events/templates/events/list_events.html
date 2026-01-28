@@ -1,0 +1,288 @@
+{% extends "adminDashBoard.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="/static/assets/css/pagination.css">
+
+<style>
+.filter-card {
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+}
+
+.event-row {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: #fff;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+
+.event-row:hover {
+  box-shadow: 0 12px 25px rgba(0,0,0,.06);
+  transform: translateY(-2px);
+}
+
+.event-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.event-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.badge-category {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+</style>
+
+<div class="container-fluid mt-4">
+
+  <!-- HEADER -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Events</h3>
+    <a href="/events/create/event/" class="btn btn-primary">
+      <i class="ti ti-plus"></i> Add Event
+    </a>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="card filter-card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label">From</label>
+          <input type="date" id="filter-from" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">To</label>
+          <input type="date" id="filter-to" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select id="filter-status" class="form-select">
+            <option value="">All</option>
+            <option value="created">Created</option>
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Search</label>
+          <input type="text" id="filter-search" class="form-control"
+                 placeholder="Search by title">
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button id="apply-filter" class="btn btn-primary">
+            <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENT LIST -->
+  <div id="events-container">
+    <div id="events-list" class="d-grid gap-3"></div>
+
+    <!-- PAGINATION INFO -->
+    <div class="pagination-info" id="pagination-info"></div>
+
+    <!-- PAGINATION CONTROLS -->
+    <nav>
+      <ul id="events-pagination" class="pagination justify-content-center"></ul>
+    </nav>
+  </div>
+
+  <!-- EVENT DETAILS -->
+  <div id="event-details" class="card shadow-lg mt-4 d-none border-0">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h4 id="detail-title" class="fw-bold"></h4>
+          <small id="detail-meta" class="text-muted"></small>
+        </div>
+        <button id="close-details" class="btn btn-outline-secondary btn-sm">
+          Close
+        </button>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Total Amount:</strong> ₹ <span id="detail-total"></span></p>
+          <p><strong>Collected:</strong> ₹ <span id="detail-collected"></span></p>
+          <p><strong>Due Date:</strong> <span id="detail-due"></span></p>
+          <p><strong>Created By:</strong> <span id="detail-createdby"></span></p>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="fw-bold">Participants</h6>
+          <ul id="detail-members" class="list-group list-group-flush"></ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
+<script>
+let currentPage = 1;
+const pageSize = 10;
+
+async function loadEvents() {
+  const params = {
+    pageNo: currentPage,
+    pageSize,
+    fromDate: document.getElementById('filter-from').value || '',
+    toDate: document.getElementById('filter-to').value || '',
+    status: document.getElementById('filter-status').value || '',
+    search: document.getElementById('filter-search').value || ''
+  };
+
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const url = `/api/events/?${qs}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const resp = await response.json();
+    const items = resp.data || resp.Data || [];
+    const totalPages = resp.TotalPages || 1;
+    const totalRecords = resp.TotalRecord || 0;
+
+    renderEventList(items);
+    displayPaginationInfo('pagination-info', currentPage, totalPages, totalRecords);
+    renderPagination('events-pagination', currentPage, totalPages, (page) => {
+      currentPage = page;
+      loadEvents();
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderEventList(events) {
+  const list = document.getElementById('events-list');
+  list.innerHTML = '';
+
+  if (!events.length) {
+    list.innerHTML = '<div class="text-muted p-4">No events found</div>';
+    return;
+  }
+
+  events.forEach(ev => {
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.dataset.id = ev.id;
+    row.innerHTML = `
+      <div class="row align-items-center">
+        <div class="col-md-3">
+          <div class="event-title">${ev.title}</div>
+          <div class="event-meta">📅 ${ev.event_date || ''}</div>
+        </div>
+        <div class="col-md-2">
+          <span class="badge badge-category">${ev.category || ''}</span>
+        </div>
+        <div class="col-md-2">
+          <span class="badge bg-light text-dark">${ev.status || ''}</span>
+        </div>
+        <div class="col-md-2 text-muted">👥 ${ev.persons_count || 0}</div>
+        <div class="col-md-2 text-muted">👤 ${ev.created_by_name || ''}</div>
+        <div class="col-md-1 text-end">
+          <button class="btn btn-sm btn-outline-primary view-summary">View</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  // Attach view summary handlers
+  document.querySelectorAll('.view-summary').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const eventId = btn.closest('.event-row').dataset.id;
+      try {
+        const response = await fetch(`/api/events/${eventId}/summary/`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const resp = await response.json();
+        const summary = resp.data || resp.Data || {};
+        renderEventSummary(summary, eventId);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
+
+  // Also allow clicking the row itself
+  document.querySelectorAll('.event-row').forEach(row => {
+    row.addEventListener('click', async (e) => {
+      if (e.target.closest('.view-summary')) return; // Skip if clicked on button
+      const eventId = row.dataset.id;
+      try {
+        const response = await fetch(`/api/events/${eventId}/summary/`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const resp = await response.json();
+        const summary = resp.data || resp.Data || {};
+        renderEventSummary(summary, eventId);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  });
+}
+
+function renderEventSummary(summary, eventId) {
+  const createdBy = summary.created_by || {};
+  document.getElementById('detail-title').innerText = `Event #${eventId}`;
+  document.getElementById('detail-meta').innerText = `📅 ${summary.event_date || ''} • ${summary.start_date_time || ''}`;
+  document.getElementById('detail-total').innerText = summary.total_amount ?? '-';
+  document.getElementById('detail-collected').innerText = summary.collected_amount ?? '-';
+  document.getElementById('detail-due').innerText = summary.due_date || '-';
+  document.getElementById('detail-createdby').innerText = `${createdBy.full_name || createdBy.email || '-'}`;
+
+  const membersList = document.getElementById('detail-members');
+  membersList.innerHTML = '';
+  (summary.members || []).forEach(m => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.innerHTML = `<strong>${m.full_name || m.email}</strong><br><small class="text-muted">${m.email || ''}</small>`;
+    membersList.appendChild(li);
+  });
+
+  document.getElementById('events-container').classList.add('d-none');
+  document.getElementById('event-details').classList.remove('d-none');
+  document.getElementById('event-details').scrollIntoView({ behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadEvents();
+
+  document.getElementById('apply-filter').addEventListener('click', () => {
+    currentPage = 1;
+    loadEvents();
+  });
+
+  document.getElementById('close-details').addEventListener('click', () => {
+    document.getElementById('event-details').classList.add('d-none');
+    document.getElementById('events-container').classList.remove('d-none');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+</script>
+{% endblock %}

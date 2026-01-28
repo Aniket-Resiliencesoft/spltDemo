@@ -37,7 +37,6 @@ def login_view(request):
             response = render(request, 'auth/login.html')
             response.delete_cookie('access_token')
             return response
-    
     # No token, show login page
     return render(request, 'auth/login.html')
 
