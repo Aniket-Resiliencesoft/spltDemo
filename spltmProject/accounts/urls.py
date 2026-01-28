@@ -1,6 +1,6 @@
 from django.urls import path
 from accounts.api_views.auth_api import LoginAPI, OTPGenerateAPI, OTPVerifyAPI
-from accounts.api_views.dashboard_api import DashboardStatsAPI
+from accounts.api_views.dashboard_api import DashboardStatsAPI, UserDashboardAPI
 
 from accounts.api_views.user_api import (
     AssignUserRoleAPI,
@@ -47,6 +47,7 @@ urlpatterns += [
 
 urlpatterns += [
     path('api/dashboard/stats/', DashboardStatsAPI.as_view()),
+    path('api/dashboard/user/', UserDashboardAPI.as_view()),
 ]
 
 urlpatterns +=[

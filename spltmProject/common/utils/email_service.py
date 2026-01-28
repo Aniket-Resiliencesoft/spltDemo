@@ -11,16 +11,23 @@ from email.mime.multipart import MIMEMultipart
 from django.conf import settings
 import logging
 import os
+from dotenv import load_dotenv
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / ".env")
 
 # Email Configuration
 EMAIL_CONFIG = {
-    "SmtpServer": os.getenv("SMTP_SERVER"),
-    "SmtpPort": int(os.getenv("SMTP_PORT", 587)),
-    "Username": os.getenv("SMTP_USERNAME"),
-    "Password": os.getenv("SMTP_PASSWORD"),
-    "DefaultFrom": os.getenv("SMTP_FROM"),
+    "SmtpServer": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "Username": "aniket.kum242@gmail.com",
+    "Password": "lhhxdsxbdomzzbuk",  # app password, no spaces
+    "DefaultFrom": "aniket.kum242@gmail.com",
 }
+
 
 
 def send_email(recipient_email, subject, body, is_html=False):
@@ -67,6 +74,11 @@ def send_email(recipient_email, subject, body, is_html=False):
                 "status": "error",
                 "message": "Invalid email address provided"
             }
+        
+        # Debug: Check if credentials are loaded
+        print(f"DEBUG: SMTP Server: {EMAIL_CONFIG['SmtpServer']}")
+        print(f"DEBUG: SMTP Username: {EMAIL_CONFIG['Username']}")
+        print(f"DEBUG: SMTP Password: {'*' * len(str(EMAIL_CONFIG['Password'])) if EMAIL_CONFIG['Password'] else 'NOT SET'}")
         
         # Create email message
         msg = MIMEMultipart('alternative')

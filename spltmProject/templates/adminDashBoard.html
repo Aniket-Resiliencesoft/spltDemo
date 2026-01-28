@@ -260,23 +260,38 @@
     }
 
     /* Primary Button Color Override */
-    .btn-primary {
-      background-color: #94d600 !important;
-      border-color: #94d600 !important;
-      color: #fff !important;
+    /* Primary Button Color Override */
+   .btn-primary {
+    position: relative;
+    background: linear-gradient(
+        135deg,
+        #6366f1,
+        #7c7ff3,
+        #4f46e5
+    ) !important;
+    background-size: 200% 200%;
+    border: none !important;
+    color: #fff !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: btnGradientMove 6s ease infinite;
+}
+ 
+/* Gradient animation */
+@keyframes btnGradientMove {
+    0% {
+        background-position: 0% 50%;
     }
-
-    .btn-primary:hover {
-      background-color: #7ab800 !important;
-      border-color: #7ab800 !important;
+    50% {
+        background-position: 100% 50%;
     }
-
-    .btn-primary:active,
-    .btn-primary:focus {
-      background-color: #7ab800 !important;
-      border-color: #7ab800 !important;
-      box-shadow: 0 0 0 0.25rem rgba(148, 214, 0, 0.25) !important;
+    100% {
+        background-position: 0% 50%;
     }
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+}
 
     /* Background Gradient */
     .pc-container {
@@ -775,6 +790,30 @@ function handleLogout() {
 }
 
 
+</script>
+<script>
+$(function () {
+
+    $('.contact').on('keydown', function (e) {
+
+        // allow backspace, delete, tab, arrows
+        if ($.inArray(e.keyCode, [8, 9, 37, 39, 46]) !== -1) {
+            return;
+        }
+
+        // allow only 0–9
+        if (e.keyCode < 48 || e.keyCode > 57) {
+            e.preventDefault();
+            return;
+        }
+
+        // limit to 10 digits
+        if (this.value.length >= 10) {
+            e.preventDefault();
+        }
+    });
+
+});
 </script>
 {% block extra_js %}
 {% endblock %}

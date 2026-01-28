@@ -117,11 +117,22 @@ class Event(BaseModel):
         if member_ids:
             users = User.objects.filter(id__in=member_ids)
             for u in users:
+                # Get amount contributed by this user
+                contributed_amount = Decimal('0.00')
+                if EventCollectionTransaction is not None:
+                    trans = EventCollectionTransaction.objects.filter(
+                        event=self,
+                        user=u,
+                        is_active=True
+                    ).aggregate(total=Sum('amount'))
+                    if trans and trans.get('total') is not None:
+                        contributed_amount = trans['total']
+                
                 members.append({
                     'id': u.id,
                     'full_name': getattr(u, 'full_name', str(u)),
                     'email': getattr(u, 'email', None),
-                    # 'ammount_paid': qs.filter(user=u, status='completed').aggregate(total=Sum('amount'))['total'] or Decimal('0.00'),
+                    'contributed_amount': float(contributed_amount),
                 })
 
         created_by_info = None

@@ -542,17 +542,17 @@
             const tokenData = response.Data;
             
             // Save token and user info
-            setCookie("access_token", tokenData.access_token, 1);
+            setCookie("access_token", 1);
             setCookie("user_role", tokenData.user.role, 1);
             setCookie("user_name", tokenData.user.full_name, 1);
             setCookie("user_email", tokenData.user.email, 1);
             setCookie("user_id", tokenData.user.id, 1);
             
-            localStorage.setItem("access_token", tokenData.access_token);
-            localStorage.setItem("user_role", tokenData.user.role);
-            localStorage.setItem("user_name", tokenData.user.full_name);
-            localStorage.setItem("user_email", tokenData.user.email);
-            localStorage.setItem("user_id", tokenData.user.id);
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("user_role");
+            localStorage.removeItem("user_name");
+            localStorage.removeItem("user_email");
+            localStorage.removeItem("user_id");
             
             // Clear OTP session data
             localStorage.removeItem('otp_user_id');

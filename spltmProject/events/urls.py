@@ -1,6 +1,7 @@
 from django.urls import path
 from events.api_views.event_api import (
     EventListAPI,
+    EventJoinedListAPI,
     EventDetailAPI,
     EventCreateAPI,
     EventSummaryAPI,
@@ -14,6 +15,7 @@ from . import ui_views
 urlpatterns = [
     # List and Create
     path('api/events/', EventListAPI.as_view()),
+    path('api/events/joined/', EventJoinedListAPI.as_view()),
     path('api/events/create/', EventCreateAPI.as_view()),
     
     # Detail, Update, Delete

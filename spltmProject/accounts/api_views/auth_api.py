@@ -258,6 +258,12 @@ class OTPGenerateAPI(APIView):
             user_name=user.full_name
         )
 
+        # Log if OTP email fails
+        if email_result.get("status") == "error":
+            print(f"OTP sent - Failed: {email_result.get('message')}")
+        else:
+            print(f"OTP sent - Success: {email_result.get('message')}")
+
         return auth_response(
             True,
             "OTP sent successfully",
