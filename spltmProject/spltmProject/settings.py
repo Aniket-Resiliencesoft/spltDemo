@@ -155,17 +155,9 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 240  # 1 hour
 # RAZORPAY CONFIGURATION
 # ======================
 
-RAZORPAY_KEY_ID = 'YOUR_RAZORPAY_KEY_ID'  # Get from Razorpay Dashboard
-RAZORPAY_KEY_SECRET = 'YOUR_RAZORPAY_KEY_SECRET'  # Get from Razorpay Dashboard
-RAZORPAY_ACCOUNT_NUMBER = 'YOUR_RAZORPAY_ACCOUNT_NUMBER'  # For payouts
-
-# For local testing, you can use Razorpay test keys:
-# Test Key ID: rzp_test_1234567890abcd
-# Test Key Secret: Available in dashboard
-
 import os
-if 'RAZORPAY_KEY_ID' in os.environ:
-    RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
-    RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
-    RAZORPAY_ACCOUNT_NUMBER = os.environ.get('RAZORPAY_ACCOUNT_NUMBER')
+
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_Ryz0niT7uF5udW')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'dUOe9P6snY0j8W0thAeMr7g1')
+RAZORPAY_ACCOUNT_NUMBER = os.environ.get('RAZORPAY_ACCOUNT_NUMBER', '2323230056748898')
 

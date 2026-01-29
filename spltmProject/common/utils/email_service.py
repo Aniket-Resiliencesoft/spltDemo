@@ -24,7 +24,7 @@ EMAIL_CONFIG = {
     "SmtpServer": "smtp.gmail.com",
     "SmtpPort": 587,
     "Username": "aniket.kum242@gmail.com",
-    "Password": "lhhxdsxbdomzzbuk",  # app password, no spaces
+    "Password": "dnqvblpmmhfathgf",  # app password, no spaces
     "DefaultFrom": "aniket.kum242@gmail.com",
 }
 
