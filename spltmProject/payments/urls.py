@@ -8,7 +8,7 @@ from payments.api_views.transaction_api import (
     EventTransactionSummaryAPI,
     UserTransactionHistoryAPI,
 )
-from payments.api_views import (
+from .api_views import (
     CreateOrderAPI,
     GetWalletBalanceAPI,
     GetWalletLedgerAPI,
