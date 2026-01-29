@@ -10,10 +10,13 @@ from payments.api_views.transaction_api import (
 )
 from .api_views import (
     CreateOrderAPI,
+    VerifyPaymentAPI,
     GetWalletBalanceAPI,
     GetWalletLedgerAPI,
     InitiatePayoutAPI,
-    WebhookHandlerAPI
+    WebhookHandlerAPI,
+    SettleToVendorAPI,
+    GetSettlementSummaryAPI
 )
 from . import ui_views
 
@@ -33,10 +36,15 @@ urlpatterns = [
     
     # Razorpay Payment APIs
     path('api/payments/create-order/', CreateOrderAPI.as_view(), name='create-order'),
+    path('api/payments/verify-payment/', VerifyPaymentAPI.as_view(), name='verify-payment'),
     path('api/payments/wallet/balance/', GetWalletBalanceAPI.as_view(), name='wallet-balance'),
     path('api/payments/wallet/ledger/', GetWalletLedgerAPI.as_view(), name='wallet-ledger'),
     path('api/payments/payout/initiate/', InitiatePayoutAPI.as_view(), name='initiate-payout'),
     path('api/webhooks/razorpay/', WebhookHandlerAPI.as_view(), name='razorpay-webhook'),
+    
+    # Event Settlement APIs (Owner distributes to vendors)
+    path('api/payments/settle-to-vendor/', SettleToVendorAPI.as_view(), name='settle-to-vendor'),
+    path('api/payments/settlement/summary/', GetSettlementSummaryAPI.as_view(), name='settlement-summary'),
     
     # UI payments list page
     path('list/payment/', ui_views.list_payment_page, name='list_payments'),

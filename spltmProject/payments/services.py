@@ -13,7 +13,7 @@ import hashlib
 import json
 import logging
 from decimal import Decimal
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 import razorpay
 from django.conf import settings
@@ -23,7 +23,8 @@ from payments.models import (
     UserWallet,
     WalletLedger,
     RazorpayPayout,
-    WebhookLog
+    WebhookLog,
+    EventCollectionTransaction
 )
 from accounts.models import User
 from events.models import Event
@@ -717,4 +718,204 @@ class RazorpayPaymentService:
                 razorpay_entity_id=payload.get('entity', {}).get('id')
             )
         except Exception as e:
-            logger.error(f"Error logging webhook: {str(e)}")
+            logger.error(f"Error logging webhook: {str(e)}")    
+    # =====================================================================
+    # 6. EVENT SETTLEMENT (Vendor requests, Owner's account pays)
+    # =====================================================================
+    
+    def request_settlement(self, event_id, vendor_id, settlement_upi, amount=None):
+        """
+        Vendor requests settlement from owner's collected amount.
+        Uses owner's account number (RAZORPAY_ACCOUNT_NUMBER) for payout.
+        
+        Args:
+            event_id: Event ID
+            vendor_id: Vendor (event creator) ID
+            settlement_upi: Vendor's UPI ID
+            amount: Specific amount (optional, if None = all remaining collected)
+        
+        Returns:
+            {
+                "IsSuccess": True/False,
+                "Message": "...",
+                "Data": {...}
+            }
+        """
+        try:
+            from payments.models import EventSettlement
+            
+            event = Event.objects.get(id=event_id, is_active=True)
+            vendor = User.objects.get(id=vendor_id, is_active=True)
+            
+            # Validate vendor is event creator
+            if event.created_by.id != vendor_id:
+                return {
+                    "IsSuccess": False,
+                    "Message": "Only event creator can request settlement",
+                    "Data": None
+                }
+            
+            # Get total collected for event
+            total_collected = EventCollectionTransaction.objects.filter(
+                event_id=event_id,
+                status='completed'
+            ).aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0')
+            
+            # Get total already settled for event
+            total_settled = EventSettlement.objects.filter(
+                event_id=event_id,
+                status='completed'
+            ).aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0')
+            
+            # Calculate remaining available
+            remaining = total_collected - total_settled
+            
+            # Determine settlement amount
+            if amount is None:
+                settlement_amount = remaining
+            else:
+                settlement_amount = Decimal(str(amount))
+            
+            # Validate amount
+            if settlement_amount <= 0:
+                return {
+                    "IsSuccess": False,
+                    "Message": "Settlement amount must be greater than 0",
+                    "Data": None
+                }
+            
+            if settlement_amount > remaining:
+                return {
+                    "IsSuccess": False,
+                    "Message": f"Cannot settle ₹{settlement_amount}. Remaining available: ₹{remaining}",
+                    "Data": {
+                        "total_collected": float(total_collected),
+                        "total_settled": float(total_settled),
+                        "remaining_amount": float(remaining)
+                    }
+                }
+            
+            # Create or get vendor's fund account in Razorpay
+            # Get or create contact for vendor
+            contact = self._get_or_create_razorpay_contact(vendor)
+            
+            # Create fund account for vendor
+            fund_account = self._create_razorpay_fund_account(
+                contact['id'],
+                settlement_upi
+            )
+            
+            # Create payout using OWNER's account number
+            razorpay_payout = self.client.payout.create({
+                'account_number': settings.RAZORPAY_ACCOUNT_NUMBER,  # OWNER's account
+                'fund_account_id': fund_account['id'],
+                'amount': int(settlement_amount * 100),  # Convert to paise
+                'currency': 'INR',
+                'mode': 'UPI',
+                'purpose': 'settlement',
+                'queue_if_low_balance': True,
+                'reference_id': f"settlement_event_{event_id}_vendor_{vendor_id}",
+                'notes': {
+                    'event_id': event_id,
+                    'vendor_id': vendor_id,
+                    'vendor_name': vendor.full_name,
+                    'type': 'event_settlement'
+                }
+            })
+            
+            # Create settlement record
+            settlement = EventSettlement.objects.create(
+                event=event,
+                vendor=vendor,
+                settled_by=event.created_by,  # Vendor requested
+                amount=settlement_amount,
+                description=f"Settlement requested to {settlement_upi}",
+                status='completed'
+            )
+            
+            logger.info(f"Settlement initiated: {razorpay_payout['id']} for vendor {vendor_id}")
+            
+            return {
+                "IsSuccess": True,
+                "Message": "Settlement initiated successfully",
+                "Data": {
+                    "settlement_id": settlement.id,
+                    "razorpay_payout_id": razorpay_payout['id'],
+                    "amount": float(settlement_amount),
+                    "vendor_upi": settlement_upi,
+                    "total_collected": float(total_collected),
+                    "total_settled": float(total_settled + settlement_amount),
+                    "remaining_amount": float(remaining - settlement_amount)
+                }
+            }
+        
+        except Event.DoesNotExist:
+            return {
+                "IsSuccess": False,
+                "Message": "Event not found",
+                "Data": None
+            }
+        except User.DoesNotExist:
+            return {
+                "IsSuccess": False,
+                "Message": "Vendor not found",
+                "Data": None
+            }
+        except Exception as e:
+            logger.error(f"Error requesting settlement: {str(e)}")
+            return {
+                "IsSuccess": False,
+                "Message": f"Error: {str(e)}",
+                "Data": None
+            }
+    
+    def get_event_settlement_summary(self, event_id):
+        """Get settlement summary for event"""
+        try:
+            from payments.models import EventSettlement
+            
+            total_collected = EventCollectionTransaction.objects.filter(
+                event_id=event_id,
+                status='completed'
+            ).aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0')
+            
+            total_settled = EventSettlement.objects.filter(
+                event_id=event_id,
+                status='completed'
+            ).aggregate(models.Sum('amount'))['amount__sum'] or Decimal('0')
+            
+            remaining = total_collected - total_settled
+            
+            settlements = EventSettlement.objects.filter(
+                event_id=event_id,
+                status='completed'
+            ).order_by('-settlement_date')
+            
+            settlement_data = [
+                {
+                    'id': s.id,
+                    'vendor': s.vendor.full_name,
+                    'amount': float(s.amount),
+                    'description': s.description,
+                    'date': s.settlement_date.isoformat()
+                }
+                for s in settlements
+            ]
+            
+            return {
+                "IsSuccess": True,
+                "Message": "Settlement summary retrieved",
+                "Data": {
+                    "total_collected": float(total_collected),
+                    "total_settled": float(total_settled),
+                    "remaining_amount": float(remaining),
+                    "settlements": settlement_data
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting settlement summary: {str(e)}")
+            return {
+                "IsSuccess": False,
+                "Message": f"Error: {str(e)}",
+                "Data": None
+            }

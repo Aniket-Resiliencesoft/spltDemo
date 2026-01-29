@@ -496,3 +496,77 @@ class WebhookLog(BaseModel):
     
     def __str__(self):
         return f"{self.event_type} - {self.webhook_id}"
+
+class EventSettlement(BaseModel):
+    """
+    Track settlement payments from owner to vendor.
+    Owner distributes collected money (from EventCollectionTransaction) to vendors.
+    
+    Money flow:
+    - Users pay to join event → goes to OWNER account
+    - Owner distributes from collected amount → goes to VENDOR (event creator)
+    - Validation: amount_paid_to_vendor <= total_collected
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
+    # Event and people involved
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='settlements'
+    )
+    
+    vendor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='received_settlements',
+        help_text="Event creator receiving payment"
+    )
+    
+    settled_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='initiated_settlements',
+        help_text="Owner/Admin who initiated settlement"
+    )
+    
+    # Settlement amount
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    
+    # Description
+    description = models.TextField(
+        blank=True,
+        null=True,
+        help_text="e.g., Accommodation, Transport, etc."
+    )
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    
+    # Settlement tracking
+    settlement_date = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = "event_settlements"
+        ordering = ['-settlement_date']
+        indexes = [
+            models.Index(fields=['event', 'status']),
+            models.Index(fields=['vendor']),
+            models.Index(fields=['settled_by']),
+        ]
+    
+    def __str__(self):
+        return f"Settlement {self.id} - {self.vendor.full_name} - ₹{self.amount}"
