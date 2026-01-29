@@ -203,7 +203,7 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
                 event_id=event.id,
                 user_id=current_user_id,
                 is_active=True
-            ).latest('created_at', default=None)
+            ).order_by('-created_at').first()
             
             serializer = EventListSerializer(event)
             event_data = serializer.data
