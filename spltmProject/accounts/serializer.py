@@ -3,6 +3,8 @@ from accounts.models import User, Role, UserRole
 
 
 class UserGetSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -14,7 +16,21 @@ class UserGetSerializer(serializers.ModelSerializer):
             'is_active',
             'created_at',
             'updated_at',
+            'role',
         ]
+
+    def get_role(self, obj):
+        user_role = obj.userrole_set.filter(
+            is_active=True
+        ).select_related('role').first()
+
+        if user_role:
+            return {
+                "id": user_role.role.id,
+                "name": user_role.role.name
+            }
+
+        return None
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 

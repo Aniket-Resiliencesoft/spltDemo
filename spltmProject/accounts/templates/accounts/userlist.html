@@ -197,7 +197,7 @@ async function fetchUsers() {
 ===================== */
 function renderUserList(users) {
   const $list = $('#users-list').empty();
- 
+    
   if (!users.length) {
      $list.append(`
       <div class="user-row" >
@@ -210,6 +210,11 @@ function renderUserList(users) {
   }
  
   users.forEach(u => {
+     const roleName = u.role?.name ? u.role.name : 'USER';
+     const roleBadge =
+  roleName === 'ADMIN'
+    ? '<span class="badge bg-danger">Admin</span>'
+    : '<span class="badge bg-secondary">User</span>';
     $list.append(`
       <div class="user-row" data-id="${u.id}">
         <div class="row align-items-center">
@@ -227,9 +232,15 @@ function renderUserList(users) {
             ${u.is_active
               ? '<span class="badge bg-success">Active</span>'
               : '<span class="badge bg-danger">Inactive</span>'}
+            
+          </div>
+         <div class="col-md-1 ">
+                    <div >
+            ${roleBadge}
+          </div>
           </div>
  
-          <div class="col-md-3 user-meta">
+          <div class="col-md-2 user-meta">
             Created: ${formatDate(u.created_at)}
           </div>
  
