@@ -16,7 +16,7 @@ tzdata==2025.3
 
 # Authentication & Security
 PyJWT==2.10.1
-
+razorpay==2.0.0
 # Image Processing
 pillow==10.4.0
 
@@ -28,3 +28,5 @@ packaging==25.0
 
 setuptools==80.9.0
 wheel==0.45.1
+python-dotenv== 1.2.1
+dotenv==0.9.9
