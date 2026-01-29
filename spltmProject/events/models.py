@@ -50,12 +50,14 @@ class Event(BaseModel):
     event_date = models.DateField()
     start_date_time = models.DateTimeField()
     end_date_time = models.DateTimeField()
-    due_pay_date = models.DateField()
+    due_pay_date_time = models.DateField()
     event_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     # Location fields
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
-    
+    location=models.TextField(blank=True, null=True)
+    custom_category = models.CharField(max_length=100, blank=True, null=True)
+    vendor_name=models.CharField(max_length=150,blank=True,null=True)
     # Event details
     persons_count = models.IntegerField(default=1)
     status = models.CharField(

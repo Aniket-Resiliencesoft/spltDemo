@@ -4,15 +4,15 @@ Serializers for Event model
 
 from rest_framework import serializers
 from events.models import Event
-
+from decimal import Decimal, ROUND_HALF_UP
 
 class EventGetSerializer(serializers.ModelSerializer):
-    """Read-only serializer for retrieving event details"""
-    
     category_display = serializers.CharField(source='get_category_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
-    
+
+    per_person_amount = serializers.SerializerMethodField()
+
     class Meta:
         model = Event
         fields = [
@@ -24,10 +24,12 @@ class EventGetSerializer(serializers.ModelSerializer):
             'event_date',
             'start_date_time',
             'end_date_time',
-            'due_pay_date',
+            'due_pay_date_time',
             'latitude',
             'longitude',
             'persons_count',
+            'event_amount',
+            'per_person_amount',  # ✅
             'status',
             'status_display',
             'created_by',
@@ -35,14 +37,16 @@ class EventGetSerializer(serializers.ModelSerializer):
             'is_active',
             'created_at',
             'updated_at',
+            'location',
+            'custom_category',
+            'vendor_name',
         ]
-        read_only_fields = [
-            'id',
-            'created_by',
-            'created_by_name',
-            'created_at',
-            'updated_at',
-        ]
+
+    def get_per_person_amount(self, obj):
+        if not obj.persons_count or not obj.event_amount:
+            return "0.00"
+
+        return round(obj.event_amount / obj.persons_count, 2)
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
@@ -57,22 +61,25 @@ class EventCreateSerializer(serializers.ModelSerializer):
             'event_date',
             'start_date_time',
             'end_date_time',
-            'due_pay_date',
+            'due_pay_date_time',
             'latitude',
             'longitude',
             'persons_count',
             'event_amount',
             'status',
+            'location',
+            'custom_category',
+            'vendor_name',
         ]
     
     def validate(self, data):
         """
         Validates event dates.
-        Ensures: event_date <= start_date_time < end_date_time <= due_pay_date
+        Ensures: event_date <= start_date_time < end_date_time <= due_pay_date_time
         """
         start_dt = data.get('start_date_time')
         end_dt = data.get('end_date_time')
-        due_date = data.get('due_pay_date')
+        due_date = data.get('due_pay_date_time')
         event_date = data.get('event_date')
         event_amount = data.get('event_amount')
         if start_dt >= end_dt:
@@ -105,18 +112,21 @@ class EventUpdateSerializer(serializers.ModelSerializer):
             'event_date',
             'start_date_time',
             'end_date_time',
-            'due_pay_date',
+            'due_pay_date_time',
             'latitude',
             'longitude',
             'persons_count',
             'status',
+            'location',
+            'custom_category',
+            'vendor_name',
         ]
     
     def validate(self, data):
         """Validates event dates on update"""
         start_dt = data.get('start_date_time', self.instance.start_date_time)
         end_dt = data.get('end_date_time', self.instance.end_date_time)
-        due_date = data.get('due_pay_date', self.instance.due_pay_date)
+        due_date = data.get('due_pay_date_time', self.instance.due_pay_date_time)
         event_date = data.get('event_date', self.instance.event_date)
         
         if start_dt >= end_dt:
