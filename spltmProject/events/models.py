@@ -3,6 +3,7 @@ from django.db.models import Sum
 from common.models import BaseModel
 from accounts.models import User
 from decimal import Decimal
+from django.db.models import Sum, Case, When, Value, CharField
 
 
 class Event(BaseModel):
@@ -81,58 +82,73 @@ class Event(BaseModel):
     def __str__(self):
         return f"{self.title} - {self.get_category_display()}"
 
-    def get_summary(self):
-        """
-        Return event summary including members (derived from event transactions
-        as a fallback), collected amount, total amount, due date and creator details.
+    
 
-        Returned dict:
-        {
-            'members': [{ 'id': ..., 'full_name': ..., 'email': ... }, ...],
-            'due_date': date,
-            'collected_amount': Decimal,
-            'total_amount': Decimal,
-            'created_by': { 'id': ..., 'full_name': ..., 'email': ... },
-            'event_date': date,
-            'start_date_time': datetime,
-            'end_date_time': datetime,
-        }
-        """
-        # Lazy import to avoid circular imports
+    def get_summary(self):
         try:
             from payments.models import EventCollectionTransaction
         except Exception:
             EventCollectionTransaction = None
 
         collected = Decimal('0.00')
-        member_ids = []
-        if EventCollectionTransaction is not None:
-            qs = EventCollectionTransaction.objects.filter(event=self)
-            agg = qs.filter(status='completed').aggregate(total=Sum('amount'))
-            if agg and agg.get('total') is not None:
-                collected = agg['total']
-            member_ids = list(qs.values_list('user', flat=True).distinct())
-
         members = []
-        if member_ids:
-            users = User.objects.filter(id__in=member_ids)
-            for u in users:
-                # Get amount contributed by this user
-                contributed_amount = Decimal('0.00')
-                if EventCollectionTransaction is not None:
-                    trans = EventCollectionTransaction.objects.filter(
-                        event=self,
-                        user=u,
-                        is_active=True
-                    ).aggregate(total=Sum('amount'))
-                    if trans and trans.get('total') is not None:
-                        contributed_amount = trans['total']
-                
+
+        if EventCollectionTransaction:
+            qs = EventCollectionTransaction.objects.filter(
+                event=self,
+                is_active=True
+            )
+
+            # ✅ Total collected amount (ONLY completed)
+            collected = qs.filter(status='completed').aggregate(
+                total=Sum('amount')
+            )['total'] or Decimal('0.00')
+
+            # ✅ Per-user aggregation
+            user_rows = qs.values('user').annotate(
+                completed_amount=Sum(
+                    'amount',
+                    filter=models.Q(status='completed')
+                ),
+                pending_amount=Sum(
+                    'amount',
+                    filter=models.Q(status='pending')
+                ),
+                failed_amount=Sum(
+                    'amount',
+                    filter=models.Q(status='failed')
+                ),
+            )
+
+
+            users = User.objects.in_bulk([row['user'] for row in user_rows])
+
+            for row in user_rows:
+                user = users.get(row['user'])
+
+                completed_amount = row['completed_amount'] or Decimal('0.00')
+                pending_amount = row['pending_amount'] or Decimal('0.00')
+                failed_amount = row['failed_amount'] or Decimal('0.00')
+
+                if completed_amount > 0:
+                    payment_status = 'completed'
+                    display_amount = completed_amount
+                elif pending_amount > 0:
+                    payment_status = 'pending'
+                    display_amount = pending_amount
+                elif failed_amount > 0:
+                    payment_status = 'failed'
+                    display_amount = failed_amount
+                else:
+                    payment_status = 'pending'
+                    display_amount = Decimal('0.00')
+
                 members.append({
-                    'id': u.id,
-                    'full_name': getattr(u, 'full_name', str(u)),
-                    'email': getattr(u, 'email', None),
-                    'contributed_amount': float(contributed_amount),
+                    'id': user.id,
+                    'full_name': getattr(user, 'full_name', str(user)),
+                    'email': getattr(user, 'email', None),
+                    'paid_amount': display_amount,
+                    'payment_status': payment_status,
                 })
 
         created_by_info = None

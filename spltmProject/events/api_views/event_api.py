@@ -94,8 +94,9 @@ class EventListAPI(BaseAuthenticatedAPI):
             # Aggregate contributions
             total_contributed = EventCollectionTransaction.objects.filter(
                 event_id=event.id,
+                status='completed',
                 is_active=True
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            ).aggregate(total=Sum('amount'))['total'] or 0.0
             
             serializer = EventListSerializer(event)
             event_data = serializer.data

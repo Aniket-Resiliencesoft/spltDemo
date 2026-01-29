@@ -6,7 +6,6 @@
   .filter-card {
     border-radius: 14px;
     border: 1px solid #eef2f7;
-    background: linear-gradient(180deg, #efefef, rgba(255, 255, 255, 0) 100%);
   }
  
   .tx-row {
@@ -184,7 +183,7 @@
       <div class="row align-items-center">
         <div class="col-md-3">
           <div class="tx-title">${tx.event_title || "Event"}</div>
-          <div class="tx-meta">📅 ${tx.transaction_date || ""}</div>
+          <div class="tx-meta">📅 ${convertUtcToIndianTime(tx.transaction_date) || ""}</div>
         </div>
         <div class="col-md-2">👤 ${tx.user_name || "N/A"}</div>
         <div class="col-md-2">
