@@ -28,3 +28,5 @@ packaging==25.0
 
 setuptools==80.9.0
 wheel==0.45.1
+
+python-dotenv==1.2.1
