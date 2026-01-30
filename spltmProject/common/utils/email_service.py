@@ -21,11 +21,11 @@ load_dotenv(BASE_DIR / ".env")
 
 # Email Configuration
 EMAIL_CONFIG = {
-    "SmtpServer": "smtp.gmail.com",
+    "SmtpServer": "splitmoney.phpdev.co.in",
     "SmtpPort": 587,
-    "Username": "aniket.kum242@gmail.com",
-    "Password": "dnqvblpmmhfathgf",  # app password, no spaces
-    "DefaultFrom": "aniket.kum242@gmail.com",
+    "Username": "noreply@splitmoney.phpdev.co.in",
+    "Password": "15Vpz.TQR[y2", 
+    "DefaultFrom": "noreply@splitmoney.phpdev.co.in",
 }
 
 

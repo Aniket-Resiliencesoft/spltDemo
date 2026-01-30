@@ -143,7 +143,7 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
         search_filter = request.query_params.get('search', '').strip()
         
         # Get current user ID
-        current_user_id = request.jwt_user['user_id']
+        current_user_id = self.get_user_id(request)
         
         # Get all transactions grouped by event and user
         transactions_query = EventCollectionTransaction.objects.filter(
@@ -158,7 +158,7 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
         query = Event.objects.filter(
             id__in=joined_event_ids,
             is_active=True
-        ).exclude(created_by_id=current_user_id).order_by('-created_at')
+        ).order_by('-created_at')
         
         # Apply date filters
         if from_date:
