@@ -50,7 +50,7 @@ class Event(BaseModel):
     event_date = models.DateField()
     start_date_time = models.DateTimeField()
     end_date_time = models.DateTimeField()
-    due_pay_date_time = models.DateField()
+    due_pay_date_time = models.DateTimeField()
     event_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     # Location fields
     latitude = models.FloatField(blank=True, null=True)
@@ -164,7 +164,7 @@ class Event(BaseModel):
 
         return {
             'members': members,
-            'due_date': self.due_pay_date,
+            'due_date': self.due_pay_date_time,
             'collected_amount': collected,
             'total_amount': self.event_amount,
             'created_by': created_by_info,

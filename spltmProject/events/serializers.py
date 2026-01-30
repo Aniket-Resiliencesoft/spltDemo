@@ -75,28 +75,43 @@ class EventCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         """
         Validates event dates.
-        Ensures: event_date <= start_date_time < end_date_time <= due_pay_date_time
+
+        Rules:
+        - start_date_time < end_date_time
+        - due_pay_date_time must be <= start_date_time
+        - due_pay_date_time.date() must be <= event_date
+        - persons_count >= 1
         """
-        start_dt = data.get('start_date_time')
-        end_dt = data.get('end_date_time')
-        due_date = data.get('due_pay_date_time')
-        event_date = data.get('event_date')
-        event_amount = data.get('event_amount')
-        if start_dt >= end_dt:
+
+        start_dt = data.get('start_date_time')      # datetime
+        end_dt = data.get('end_date_time')          # datetime
+        due_dt = data.get('due_pay_date_time')      # datetime
+        event_date = data.get('event_date')         # date
+
+        # 1️⃣ Start must be before end
+        if start_dt and end_dt and start_dt >= end_dt:
             raise serializers.ValidationError(
                 "Start datetime must be before end datetime."
             )
-        
-        if due_date and due_date > event_date:
+
+        # 2️⃣ Due date must be before or equal to start datetime
+        if due_dt and start_dt and due_dt > start_dt:
+            raise serializers.ValidationError(
+                "Due pay date must be before event start time."
+            )
+
+        # 3️⃣ Due date must not be after event date
+        if due_dt and event_date and due_dt.date() > event_date:
             raise serializers.ValidationError(
                 "Due pay date cannot be after event date."
             )
-        
+
+        # 4️⃣ Persons count validation
         if data.get('persons_count', 1) < 1:
             raise serializers.ValidationError(
                 "Persons count must be at least 1."
             )
-        
+
         return data
 
 
@@ -168,7 +183,7 @@ class EventSummarySerializer(serializers.Serializer):
     """Serializer for event summary returned by `Event.get_summary()`."""
 
     members = serializers.ListField(child=serializers.DictField(), allow_empty=True)
-    due_date = serializers.DateField()
+    due_date = serializers.DateTimeField()
     collected_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     created_by = serializers.DictField(allow_null=True)

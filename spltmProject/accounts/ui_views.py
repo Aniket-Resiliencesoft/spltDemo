@@ -212,7 +212,7 @@ def dashboard_stream(request):
                     'event_date': ev.event_date,
                     'start_date_time': ev.start_date_time,
                     'end_date_time': ev.end_date_time,
-                    'due_pay_date': ev.due_pay_date,
+                    'due_pay_date_time': ev.due_pay_date_time,
                     'persons_count': ev.persons_count,
                     'status': ev.status,
                     'status_display': ev.get_status_display(),
