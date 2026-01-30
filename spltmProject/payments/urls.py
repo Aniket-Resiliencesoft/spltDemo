@@ -7,7 +7,12 @@ from payments.api_views.transaction_api import (
     TransactionDeleteAPI,
     EventTransactionSummaryAPI,
     UserTransactionHistoryAPI,
+    VendorPaymentCreateAPI,
+    VendorPaymentPayoutAPI,
+    VendorPaymentRefreshStatusAPI,
+    VendorPaymentStatusAPI,
 )
+from payments.api_views.razorpay_webhook import razorpay_webhook
 from .api_views import (
     CreateOrderAPI,
     VerifyPaymentAPI,
@@ -41,7 +46,26 @@ urlpatterns = [
     path('api/payments/wallet/ledger/', GetWalletLedgerAPI.as_view(), name='wallet-ledger'),
     path('api/payments/payout/initiate/', InitiatePayoutAPI.as_view(), name='initiate-payout'),
     path('api/webhooks/razorpay/', WebhookHandlerAPI.as_view(), name='razorpay-webhook'),
-    
+    #
+     # Step 3: Create vendor payment (DB entry only)
+    path('api/payments/vendor/create/',VendorPaymentCreateAPI.as_view(),name='vendor-payment-create'),
+
+    # Step 4: Trigger Razorpay payout (Owner ➜ Vendor)
+    path('api/payments/vendor/<int:transaction_id>/payout/', VendorPaymentPayoutAPI.as_view(), name='vendor-payment-payout' ),
+
+    path("api/payments/vendor/<int:transaction_id>/status/", VendorPaymentStatusAPI.as_view(), name="vendor-payment-status",),
+
+    # refresh payout status from Razorpay (optional)
+    path("api/payments/vendor/<int:transaction_id>/refresh-status/", VendorPaymentRefreshStatusAPI.as_view(), name="vendor-payment-refresh-status",),
+    # =========================
+    # Webhooks
+    # =========================
+    # Existing generic webhook (if you already use it)
+    path('api/payments/webhooks/razorpay/', WebhookHandlerAPI.as_view(), name='razorpay-webhook'),
+
+    # Vendor payout webhook (if you keep it separate)
+    path('api/webhooks/razorpay/vendor-payout/', razorpay_webhook, name='razorpay-vendor-payout-webhook'),
+    #
     # Event Settlement APIs (Owner distributes to vendors)
     path('api/payments/settle-to-vendor/', SettleToVendorAPI.as_view(), name='settle-to-vendor'),
     path('api/payments/settlement/summary/', GetSettlementSummaryAPI.as_view(), name='settlement-summary'),

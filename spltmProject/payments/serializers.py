@@ -3,7 +3,7 @@ Serializers for EventCollectionTransaction model
 """
 
 from rest_framework import serializers
-from payments.models import EventCollectionTransaction
+from payments.models import EventCollectionTransaction, VendorPaymentTransaction
 
 
 class EventCollectionTransactionGetSerializer(serializers.ModelSerializer):
@@ -100,3 +100,48 @@ class EventCollectionTransactionListSerializer(serializers.ModelSerializer):
             'status_display',
             'transaction_date',
         ]
+
+class VendorPaymentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorPaymentTransaction
+        fields = (
+            'event',
+            'initiated_by',
+            'vendor_name',
+            'vendor_upi',
+            'amount',
+            'purpose',
+        )
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate_vendor_upi(self, value):
+        if '@' not in value:
+            raise serializers.ValidationError("Invalid UPI ID.")
+        return value
+
+class VendorPaymentGetSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = VendorPaymentTransaction
+        fields = [
+            'id',
+            'event',
+            'initiated_by',
+            'vendor_name',
+            'vendor_upi',
+            'amount',
+            'purpose',
+            'status',
+            'status_display',
+            'failure_reason',
+            'razorpay_payout_id',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+

@@ -24,7 +24,7 @@ EMAIL_CONFIG = {
     "SmtpServer": "smtp.gmail.com",
     "SmtpPort": 587,
     "Username": "aniket.kum242@gmail.com",
-    "Password": "dnqvblpmmhfathgf",  # app password, no spaces
+    "Password": "dnqvblpmmhfathgf",  
     "DefaultFrom": "aniket.kum242@gmail.com",
 }
 
@@ -33,112 +33,126 @@ EMAIL_CONFIG = {
 def send_email(recipient_email, subject, body, is_html=False):
     """
     Send an email to a participant using Gmail SMTP.
-    
-    Args:
-        recipient_email (str): Email address of the recipient
-        subject (str): Email subject
-        body (str): Email body (HTML if is_html=True, else plain text)
-        is_html (bool): Whether the body is HTML or plain text
-        
-    Returns:
-        dict: Status and message
-        {
-            "status": "success" or "error",
-            "message": Description of the result,
-            "email": recipient_email (if successful)
-        }
-        
-    Example:
-        # Send plain text OTP
-        result = send_email(
-            recipient_email="user@example.com",
-            subject="Your OTP Code",
-            body="Your OTP is: 123456. Valid for 10 minutes.",
-            is_html=False
-        )
-        
-        # Send HTML email
-        result = send_email(
-            recipient_email="user@example.com",
-            subject="Your OTP Code",
-            body="<h1>OTP</h1><p>Your OTP is: <b>123456</b></p>",
-            is_html=True
-        )
     """
-    
+
+    def mask_password(pwd):
+        if not pwd:
+            return "NOT SET"
+        pwd = str(pwd)
+        if len(pwd) <= 4:
+            return "*" * len(pwd)
+        return "*" * (len(pwd) - 4) + pwd[-4:]
+
     try:
         # Validate email
         if not recipient_email or '@' not in recipient_email:
             logger.error(f"Invalid email address: {recipient_email}")
             return {
                 "status": "error",
-                "message": "Invalid email address provided"
+                "email_message": "Invalid email address provided"
             }
-        
-        # Debug: Check if credentials are loaded
-        print(f"DEBUG: SMTP Server: {EMAIL_CONFIG['SmtpServer']}")
-        print(f"DEBUG: SMTP Username: {EMAIL_CONFIG['Username']}")
-        print(f"DEBUG: SMTP Password: {'*' * len(str(EMAIL_CONFIG['Password'])) if EMAIL_CONFIG['Password'] else 'NOT SET'}")
-        
+
+        # Debug (console)
+        print("SMTP DEBUG INFO")
+        print(f"Server   : {EMAIL_CONFIG.get('SmtpServer')}")
+        print(f"Port     : {EMAIL_CONFIG.get('SmtpPort')}")
+        print(f"Username : {EMAIL_CONFIG.get('Username')}")
+        print(f"Password : {mask_password(EMAIL_CONFIG.get('Password'))}")
+
         # Create email message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = EMAIL_CONFIG['DefaultFrom']
+        msg['From'] = EMAIL_CONFIG.get('DefaultFrom')
         msg['To'] = recipient_email
-        
+
         # Attach body
         if is_html:
-            # Add plain text fallback for HTML emails
-            plain_text = "If you cannot view this email, please use a text editor."
-            msg.attach(MIMEText(plain_text, 'plain'))
+            msg.attach(MIMEText("Please view this email in HTML format.", 'plain'))
             msg.attach(MIMEText(body, 'html'))
         else:
             msg.attach(MIMEText(body, 'plain'))
-        
-        # Connect to Gmail SMTP server
-        server = smtplib.SMTP(EMAIL_CONFIG['SmtpServer'], EMAIL_CONFIG['SmtpPort'])
-        server.starttls()  # Enable TLS encryption
-        
-        # Login to Gmail
-        server.login(EMAIL_CONFIG['Username'], EMAIL_CONFIG['Password'])
-        
+
+        # Connect to SMTP
+        server = smtplib.SMTP(
+            EMAIL_CONFIG.get('SmtpServer'),
+            EMAIL_CONFIG.get('SmtpPort')
+        )
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
+        # Login
+        server.login(
+            EMAIL_CONFIG.get('Username'),
+            EMAIL_CONFIG.get('Password')
+        )
+
         # Send email
         server.sendmail(
-            from_addr=EMAIL_CONFIG['DefaultFrom'],
+            from_addr=EMAIL_CONFIG.get('DefaultFrom'),
             to_addrs=[recipient_email],
             msg=msg.as_string()
         )
-        
-        # Close connection
+
         server.quit()
-        
+
         logger.info(f"Email sent successfully to {recipient_email}")
-        
+
         return {
             "status": "success",
-            "message": f"Email sent successfully to {recipient_email}",
+            "email_message": f"Email sent successfully to {recipient_email}",
             "email": recipient_email
         }
-        
-    except smtplib.SMTPAuthenticationError:
-        logger.error(f"SMTP Authentication failed for {EMAIL_CONFIG['Username']}")
+
+    except smtplib.SMTPAuthenticationError as e:
+        debug_info = (
+            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
+            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
+            f"Username={EMAIL_CONFIG.get('Username')}, "
+            f"Password={mask_password(EMAIL_CONFIG.get('Password'))}"
+        )
+
+        logger.error(f"SMTP Authentication failed | {debug_info} | Error={str(e)}")
+
         return {
             "status": "error",
-            "message": "Email authentication failed. Check SMTP credentials."
+            "email_message": (
+                "Email authentication failed. "
+                f"Details: {debug_info}"
+            )
         }
-        
+
     except smtplib.SMTPException as e:
-        logger.error(f"SMTP error occurred: {str(e)}")
+        debug_info = (
+            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
+            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
+            f"Username={EMAIL_CONFIG.get('Username')}"
+        )
+
+        logger.error(f"SMTP error | {debug_info} | Error={str(e)}")
+
         return {
             "status": "error",
-            "message": f"SMTP error occurred: {str(e)}"
+            "email_message": (
+                f"SMTP error occurred. Details: {debug_info}. Error: {str(e)}"
+            )
         }
-        
+
     except Exception as e:
-        logger.error(f"Unexpected error sending email to {recipient_email}: {str(e)}")
+        debug_info = (
+            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
+            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
+            f"Username={EMAIL_CONFIG.get('Username')}"
+        )
+
+        logger.error(f"Unexpected error | {debug_info} | Error={str(e)}")
+
         return {
             "status": "error",
-            "message": f"Error sending email: {str(e)}"
+            "email_message": (
+                f"Unexpected error while sending email. "
+                f"Details: {debug_info}. Error: {str(e)}"
+            )
         }
 
 
