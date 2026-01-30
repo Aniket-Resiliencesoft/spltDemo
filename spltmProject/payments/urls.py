@@ -48,4 +48,5 @@ urlpatterns = [
     
     # UI payments list page
     path('list/payment/', ui_views.list_payment_page, name='list_payments'),
+    path('list/payout/', ui_views.list_payout_page, name='list_payouts'),
 ]

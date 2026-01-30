@@ -143,3 +143,11 @@ class BaseAuthenticatedAPI(APIView):
             total_record=total_record,
             status_code=status_code
         )
+    def get_user_id(self, request):
+        jwt_user = self.get_jwt_user(request)
+        if jwt_user and jwt_user.get('user_id') is not None:
+            return jwt_user.get('user_id')
+        user = getattr(request, 'user', None)
+        if user and getattr(user, 'id', None) is not None:
+            return user.id
+        return None

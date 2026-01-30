@@ -123,37 +123,53 @@
   </div>
  
   <!-- EVENT DETAILS -->
-  <div id="event-details" class="card shadow-lg mt-4 d-none border-0">
-    <div class="card-body">
- 
-      <div class="d-flex justify-content-between align-items-start">
-        <div>
-          <h4 id="detail-title" class="fw-bold"></h4>
-          <small id="detail-meta" class="text-muted"></small>
-        </div>
-        <button id="close-details" class="btn btn-outline-secondary btn-sm">
-          Close
-        </button>
+<div id="event-details" class="card shadow-lg mt-4 d-none border-0">
+  <div class="card-body">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h4 id="detail-title" class="fw-bold mb-1"></h4>
+        <small id="detail-meta" class="text-muted"></small>
       </div>
- 
-      <hr>
- 
-      <div class="row">
-        <div class="col-md-6">
-          <p><strong>Total Amount:</strong> ₹ <span id="detail-total"></span></p>
-          <p><strong>Collected:</strong> ₹ <span id="detail-collected"></span></p>
-          <p><strong>Due Date:</strong> <span id="detail-due"></span></p>
-          <p><strong>Created By:</strong> <span id="detail-createdby"></span></p>
-        </div>
- 
-        <div class="col-md-6">
-          <h6 class="fw-bold">Participants</h6>
-          <ul id="detail-members" class="list-group list-group-flush"></ul>
-        </div>
-      </div>
- 
+      <button id="close-details" class="btn btn-outline-secondary btn-sm">
+        Close
+      </button>
     </div>
+
+    <hr>
+
+    <!-- Info Row -->
+    <div class="row mb-4">
+      <!-- Event Info -->
+      <div class="col-md-6">
+        <h6 class="fw-bold mb-3">Event Details</h6>
+        <p><strong>Event Date:</strong> <span id="detail-event-date">-</span></p>
+        <p><strong>Start Time:</strong> <span id="detail-start">-</span></p>
+        <p><strong>End Time:</strong> <span id="detail-end">-</span></p>
+        <p><strong>Created By:</strong> <span id="detail-createdby">-</span></p>
+      </div>
+
+      <!-- Financial Info -->
+      <div class="col-md-6">
+        <h6 class="fw-bold mb-3">Financial Summary</h6>
+        <p><strong>Total Amount:</strong> ₹ <span id="detail-total">-</span></p>
+        <p><strong>Collected Amount:</strong> ₹ <span id="detail-collected">-</span></p>
+        <p><strong>Due Date:</strong> <span id="detail-due">-</span></p>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- Participants -->
+    <div>
+      <h6 class="fw-bold mb-3">Participants</h6>
+      <ul id="detail-members" class="list-group list-group-flush"></ul>
+    </div>
+
   </div>
+</div>
+
  
 </div>
  
@@ -273,47 +289,73 @@ function renderEventList(events) {
 }
  
 function renderEventSummary(summary, eventId) {
-  const createdBy = summary.created_by || {};
+
+  /* ---------- Header ---------- */
   document.getElementById('detail-title').innerText = `Event #${eventId}`;
-  document.getElementById('detail-meta').innerText = ` ${convertUtcToIndianTime(summary.start_date_time) || ''} - ${convertUtcToIndianTime(summary.end_date_time) || ''}`;
+  document.getElementById('detail-meta').innerText =
+    `${convertUtcToIndianTime(summary.start_date_time)} - ${convertUtcToIndianTime(summary.end_date_time)}`;
+
+  /* ---------- Event Info ---------- */
+  document.getElementById('detail-event-date').innerText = summary.event_date || '-';
+  document.getElementById('detail-start').innerText =
+    convertUtcToIndianTime(summary.start_date_time) || '-';
+  document.getElementById('detail-end').innerText =
+    convertUtcToIndianTime(summary.end_date_time) || '-';
+
+  const createdBy = summary.created_by || {};
+  document.getElementById('detail-createdby').innerText =
+    createdBy.full_name || createdBy.email || '-';
+
+  /* ---------- Financial Info ---------- */
   document.getElementById('detail-total').innerText = summary.total_amount ?? '-';
   document.getElementById('detail-collected').innerText = summary.collected_amount ?? '-';
-  document.getElementById('detail-due').innerText = summary.due_date || '-';
-  document.getElementById('detail-createdby').innerText = `${createdBy.full_name || createdBy.email || '-'}`;
- 
+  document.getElementById('detail-due').innerText =
+    convertUtcToIndianTime(summary.due_date) || '-';
+
+  /* ---------- Participants ---------- */
   const membersList = document.getElementById('detail-members');
   membersList.innerHTML = '';
- (summary.members || []).forEach(m => {
-  const li = document.createElement('li');
-  li.className = 'list-group-item d-flex justify-content-between align-items-start';
 
-  const statusClass =
-    m.payment_status === 'completed' ? 'badge-paid' :
-    m.payment_status === 'pending'   ? 'badge-pending' :
-    'badge-failed';
+  const members = summary.members || [];
 
-  li.innerHTML = `
-    <div>
-      <strong>${m.full_name || m.email}</strong><br>
-      <small class="text-muted">${m.email || ''}</small>
-    </div>
+  if (!members.length) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item text-center text-muted';
+    li.innerText = 'No participants found';
+    membersList.appendChild(li);
+  } else {
+    members.forEach(m => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-start';
 
-    <div class="text-end">
-      <div class="member-amount">₹ ${m.paid_amount || 0}</div>
-      <span class="badge ${statusClass} text-capitalize">
-        ${m.payment_status}
-      </span>
-    </div>
-  `;
+      const statusClass =
+        m.payment_status === 'completed' ? 'badge-paid' :
+        m.payment_status === 'pending'   ? 'badge-pending' :
+        'badge-failed';
 
-  membersList.appendChild(li);
-});
+      li.innerHTML = `
+        <div>
+          <strong>${m.full_name || m.email}</strong><br>
+          <small class="text-muted">${m.email || ''}</small>
+        </div>
 
+        <div class="text-end">
+          <div class="member-amount">₹ ${m.paid_amount || 0}</div>
+          <span class="badge ${statusClass} text-capitalize">
+            ${m.payment_status}
+          </span>
+        </div>
+      `;
+      membersList.appendChild(li);
+    });
+  }
+
+  /* ---------- Toggle View ---------- */
   document.getElementById('events-container').classList.add('d-none');
   document.getElementById('event-details').classList.remove('d-none');
   document.getElementById('event-details').scrollIntoView({ behavior: 'smooth' });
 }
- 
+
 document.addEventListener('DOMContentLoaded', function () {
   loadEvents();
  

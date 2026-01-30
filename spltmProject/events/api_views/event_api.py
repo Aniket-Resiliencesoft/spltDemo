@@ -250,10 +250,31 @@ class EventDetailAPI(BaseAuthenticatedAPI):
         
         # Serialize
         serializer = EventGetSerializer(event)
-        
+        # Attach logged-in user's payment details if they have a transaction for this event
+        user_payment = None
+        current_user_id = self.get_user_id(request)
+        if current_user_id is not None:
+            txn = EventCollectionTransaction.objects.filter(
+                event_id=event.id,
+                user_id=current_user_id,
+            ).order_by('-transaction_date').first()
+            if txn:
+                user_payment = {
+                    'transaction_id': txn.id,
+                    'amount': float(txn.amount),
+                    'is_paid': str(txn.status).lower() == 'completed',
+                    'payment_status': txn.status,
+                    'payment_method': txn.payment_method,
+                    'transaction_date': txn.transaction_date.isoformat() if txn.transaction_date else None,
+                }
+
+        data = serializer.data
+        if user_payment is not None:
+            data['user_payment'] = user_payment
+
         # Return response
         return self.success_response(
-            data=serializer.data,
+            data=data,
             message="Event retrieved successfully"
         )
 
@@ -525,7 +546,10 @@ class EventShareLinkAPI(BaseAuthenticatedAPI):
         from events.utils import generate_event_share_url
         
         # Generate share URL
-        share_data = generate_event_share_url(event, request=request)
+        share_data = generate_event_share_url(
+            event=event,
+            deeplink_base_url="https://split-money.onelink.me/ON1X/q8x2bf1i"
+        )
         
         # Return success response
         return self.success_response(

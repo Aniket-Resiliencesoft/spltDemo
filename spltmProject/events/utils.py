@@ -8,50 +8,49 @@ from decimal import Decimal
 from urllib.parse import urlencode
 
 
-def generate_event_share_url(event, request=None, base_url=None):
+from decimal import Decimal
+from urllib.parse import urlencode
+
+
+def generate_event_share_url(
+    event,
+    request=None,
+    base_url=None,
+    deeplink_base_url=None
+):
     """
-    Generate a shareable event URL with event details.
-    
-    Args:
-        event: Event model instance
-        request: Django request object (optional, used to get base URL)
-        base_url: Custom base URL (optional, overrides request-based URL)
-    
-    Returns:
-        dict: {
-            'full_url': 'http://domain.com/join/event/?event_id=123&amount=500.00',
-            'relative_url': '/join/event/?event_id=123&amount=500.00',
-            'event_id': 123,
-            'per_person_amount': Decimal('500.00'),
-            'share_link': 'http://domain.com/join/event/?event_id=123&amount=500.00'
-        }
+    Generate a shareable event URL (supports normal web + App deep links)
     """
-    
+
     # Calculate per-person amount
     if event.persons_count > 0:
         per_person_amount = event.event_amount / Decimal(event.persons_count)
     else:
         per_person_amount = Decimal('0.00')
-    
-    # Round to 2 decimal places
+
     per_person_amount = per_person_amount.quantize(Decimal('0.01'))
-    
-    # Build query parameters
+
     params = {
         'event_id': event.id,
         'amount': str(per_person_amount),
     }
-    
-    # Build relative URL
+
     relative_url = f"/join/event/?{urlencode(params)}"
-    
-    # Build full URL if request is provided
+
     full_url = None
-    if request:
+
+    # 🔥 PRIORITY 1: App deep link (OneLink)
+    if deeplink_base_url:
+        full_url = f"{deeplink_base_url.rstrip('/')}{relative_url}"
+
+    # Priority 2: Request-based URL
+    elif request:
         full_url = request.build_absolute_uri(relative_url)
+
+    # Priority 3: Custom base URL
     elif base_url:
         full_url = f"{base_url.rstrip('/')}{relative_url}"
-    
+
     return {
         'full_url': full_url,
         'relative_url': relative_url,
