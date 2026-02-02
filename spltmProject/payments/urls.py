@@ -7,6 +7,7 @@ from payments.api_views.transaction_api import (
     TransactionDeleteAPI,
     EventTransactionSummaryAPI,
     UserTransactionHistoryAPI,
+    UserPaymentsSummaryAPI,
     VendorPaymentCreateAPI,
     VendorPaymentPayoutAPI,
     VendorPaymentRefreshStatusAPI,
@@ -38,6 +39,7 @@ urlpatterns = [
     # Summary and History
     path('api/events/<int:event_id>/summary/', EventTransactionSummaryAPI.as_view()),
     path('api/events/<int:event_id>/users/<int:user_id>/history/', UserTransactionHistoryAPI.as_view()),
+    path('api/users/<int:user_id>/payments/summary/', UserPaymentsSummaryAPI.as_view()),
     
     # Razorpay Payment APIs
     path('api/payments/create-order/', CreateOrderAPI.as_view(), name='create-order'),

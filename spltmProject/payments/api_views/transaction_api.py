@@ -5,7 +5,7 @@ Endpoints for managing event collection transactions.
 """
 import razorpay
 from rest_framework import status
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 import traceback
 import uuid
 
@@ -359,6 +359,67 @@ class UserTransactionHistoryAPI(BaseAuthenticatedAPI):
             page_no=page_no,
             page_size=page_size,
             message=f"User transaction history (Total: {total})"
+        )
+
+
+class UserPaymentsSummaryAPI(BaseAuthenticatedAPI):
+    """
+    GET: Returns all payments done by a user, total amount paid,
+    and aggregated payments per event.
+    """
+
+    def get(self, request, user_id):
+        # Auth: allow user themself or admin
+        auth_error = self.require_self_or_admin(request, user_id)
+        if auth_error:
+            return auth_error
+
+        # Optional pagination for transaction list
+        page_no = int(request.query_params.get('pageNo', 1))
+        page_size = int(request.query_params.get('pageSize', 100))
+
+        # Base query: consider completed payments only
+        query = EventCollectionTransaction.objects.filter(
+            user_id=user_id,
+            is_active=True,
+            status='completed'
+        ).order_by('-transaction_date')
+
+        if not query.exists():
+            return self.error_response(
+                message="No completed payments found for this user",
+                status_code=404
+            )
+
+        # Total amount across all events
+        total_amount = query.aggregate(total=Sum('amount'))['total'] or 0
+
+        # Aggregate per event
+        per_event_qs = query.values('event_id', 'event__title').annotate(
+            total_amount=Sum('amount'),
+            transaction_count=Count('id')
+        ).order_by('-total_amount')
+
+      
+
+        # Transactions (paginated)
+        total_count = query.count()
+        offset = (page_no - 1) * page_size
+        transactions = query[offset:offset + page_size]
+        serializer = EventCollectionTransactionListSerializer(transactions, many=True)
+
+        data = {
+            'user_id': user_id,
+            'total_amount': str(total_amount),
+            'transactions': serializer.data,
+        }
+
+        return self.paginated_response(
+            data=data,
+            page_no=page_no,
+            page_size=page_size,
+            total_record=total_count,
+            message="User payments summary retrieved successfully"
         )
 
 class VendorPaymentCreateAPI(BaseAuthenticatedAPI):
