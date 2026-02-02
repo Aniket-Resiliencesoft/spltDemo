@@ -164,7 +164,7 @@ class Event(BaseModel):
 
         return {
             'members': members,
-            'due_date': self.due_pay_date,
+            'due_date': self.due_pay_date_time,
             'collected_amount': collected,
             'total_amount': self.event_amount,
             'created_by': created_by_info,
