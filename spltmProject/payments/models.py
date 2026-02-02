@@ -6,6 +6,7 @@ from events.models import Event
 from accounts.models import User
 
 
+
 class EventCollectionTransaction(BaseModel):
     """
     Model to track payments/collections for event expenses.
@@ -570,3 +571,60 @@ class EventSettlement(BaseModel):
     
     def __str__(self):
         return f"Settlement {self.id} - {self.vendor.full_name} - ₹{self.amount}"
+    
+
+
+
+class VendorPaymentTransaction(models.Model):
+    STATUS_CHOICES = (
+        ('initiated', 'Initiated'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    # Event context
+    event = models.BigIntegerField()
+
+    # User who initiated the payment
+    initiated_by = models.BigIntegerField()
+
+    # Vendor details
+    vendor_name = models.CharField(max_length=255)
+    vendor_upi = models.CharField(max_length=100)
+
+    # Payment details
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    purpose = models.CharField(max_length=255, blank=True)
+
+    # Razorpay references
+    razorpay_contact_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_fund_account_id = models.CharField(max_length=255, null=True, blank=True)
+    razorpay_payout_id = models.CharField(max_length=255, null=True, blank=True)
+
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='initiated'
+    )
+
+    # Failure reason (if any)
+    failure_reason = models.TextField(blank=True)
+
+    # Meta
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "vendor_payment_transactions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event']),
+            models.Index(fields=['status']),
+            models.Index(fields=['razorpay_payout_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.event} | {self.vendor_upi} | {self.amount} | {self.status}"

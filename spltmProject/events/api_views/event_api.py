@@ -26,7 +26,7 @@ class EventListAPI(BaseAuthenticatedAPI):
     Data is grouped by eventId and userId (creator)
     Supports filters: fromDate, toDate, status, category, search
     """
-    
+    BaseAuthenticatedAPI.get_jwt_user
     def get(self, request):
         # Check authentication
         auth_error = self.require_authentication(request)
@@ -482,7 +482,7 @@ class EventStatusUpdateAPI(BaseAuthenticatedAPI):
 
 class EventSummaryAPI(BaseAuthenticatedAPI):
     """GET: Return an event summary including members, amounts and dates."""
-
+    
     def get(self, request, event_id):
         auth_error = self.require_authentication(request)
         if auth_error:

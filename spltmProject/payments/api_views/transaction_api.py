@@ -3,18 +3,29 @@ Payment/Transaction API Views
 
 Endpoints for managing event collection transactions.
 """
-
+import razorpay
 from rest_framework import status
 from django.db.models import Q, Sum
+import traceback
+import uuid
 
 from common.api.base_api import BaseAuthenticatedAPI
-from payments.models import EventCollectionTransaction
+from payments.models import EventCollectionTransaction, VendorPaymentTransaction
 from payments.serializers import (
     EventCollectionTransactionGetSerializer,
     EventCollectionTransactionCreateSerializer,
     EventCollectionTransactionUpdateSerializer,
     EventCollectionTransactionListSerializer,
+    VendorPaymentCreateSerializer,
+    VendorPaymentGetSerializer,
 )
+from common.api.base_api import BaseAuthenticatedAPI
+from payments.models import VendorPaymentTransaction
+
+# from payments.utils.razorpay_client import razorpay_client as client 
+from payments.utils.razorpay_client import razorpay_client
+
+from spltmProject import settings
 
 
 class TransactionListAPI(BaseAuthenticatedAPI):
@@ -348,4 +359,246 @@ class UserTransactionHistoryAPI(BaseAuthenticatedAPI):
             page_no=page_no,
             page_size=page_size,
             message=f"User transaction history (Total: {total})"
+        )
+
+class VendorPaymentCreateAPI(BaseAuthenticatedAPI):
+
+    def post(self, request):
+        self.require_authentication(request)
+
+        serializer = VendorPaymentCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed", serializer.errors)
+
+        txn = serializer.save()
+
+        return self.success_response(
+            VendorPaymentGetSerializer(txn).data,
+            "Vendor payment created",
+            status.HTTP_201_CREATED
+        )
+
+
+
+
+class VendorPaymentPayoutAPI(BaseAuthenticatedAPI):
+    """
+    POST: Initiate RazorpayX payout for a vendor payment transaction
+    """
+
+    def post(self, request, transaction_id):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        try:
+            txn = VendorPaymentTransaction.objects.get(id=transaction_id, is_active=True)
+        except VendorPaymentTransaction.DoesNotExist:
+            return self.error_response(
+                message="Transaction not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        if txn.razorpay_payout_id:
+            return self.error_response(
+                message="Payout already initiated",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # validations
+        if not txn.vendor_name:
+            return self.error_response(
+                message="Vendor name is missing",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not txn.vendor_upi or "@" not in txn.vendor_upi:
+            return self.error_response(
+                message="Invalid or missing vendor UPI",
+                data={"vendor_upi": txn.vendor_upi},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        account_number = getattr(settings, "RAZORPAY_ACCOUNT_NUMBER", None)
+        if not account_number:
+            return self.error_response(
+                message="RAZORPAY_ACCOUNT_NUMBER not configured",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        if txn.amount is None or txn.amount <= 0:
+            return self.error_response(
+                message="Invalid payout amount",
+                data={"amount": str(txn.amount)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # ✅ Force correct full API path (prevents "api.razorpay.comcontacts" bug)
+            contact = razorpay_client.post("/v1/contacts", {
+                "name": str(txn.vendor_name).strip(),
+                "type": "vendor"
+            })
+            contact_id = contact.get("id")
+            if not contact_id:
+                raise Exception(f"Contact creation failed: {contact}")
+
+            fund_account = razorpay_client.post("/v1/fund_accounts", {
+                "contact_id": contact_id,
+                "account_type": "vpa",
+                "vpa": {"address": txn.vendor_upi}
+            })
+            fund_account_id = fund_account.get("id")
+            if not fund_account_id:
+                raise Exception(f"Fund account creation failed: {fund_account}")
+
+            payout_payload = {
+                "account_number": account_number,
+                "fund_account_id": fund_account_id,
+                "amount": int(txn.amount * 100),
+                "currency": "INR",
+                "mode": "UPI",
+                "purpose": "payout",
+                "queue_if_low_balance": True
+            }
+
+            # ✅ Idempotency key (required for payouts in newer rules)
+            idempotency_key = str(uuid.uuid4())
+
+            # Many clients accept headers like this; if yours doesn't, see alt below
+            payout = razorpay_client.post(
+                "/v1/payouts",
+                payout_payload,
+                headers={"X-Payout-Idempotency": idempotency_key}
+            )
+
+            payout_id = payout.get("id")
+            if not payout_id:
+                raise Exception(f"Payout creation failed: {payout}")
+
+            txn.razorpay_contact_id = contact_id
+            txn.razorpay_fund_account_id = fund_account_id
+            txn.razorpay_payout_id = payout_id
+            txn.status = payout.get("status", "processing")
+            txn.failure_reason = ""
+            txn.save()
+
+            return self.success_response(
+                data=VendorPaymentGetSerializer(txn).data,
+                message="Vendor payout initiated",
+                status_code=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            print("---- Razorpay payout exception ----")
+            print("type:", type(e))
+            print("str:", str(e))
+            print("repr:", repr(e))
+            print("args:", getattr(e, "args", None))
+            traceback.print_exc()
+
+            reason = str(e) or repr(e) or "Razorpay payout failed"
+
+            txn.status = "failed"
+            txn.failure_reason = reason[:255]
+            txn.save()
+
+            return self.error_response(
+                message="Payout failed",
+                data={"error": reason},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
+class VendorPaymentStatusAPI(BaseAuthenticatedAPI):
+    """
+    GET: Get Razorpay payout status for a vendor payment transaction
+    """
+
+    def get(self, request, transaction_id):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        try:
+            txn = VendorPaymentTransaction.objects.get(id=transaction_id, is_active=True)
+        except VendorPaymentTransaction.DoesNotExist:
+            return self.error_response(
+                message="Transaction not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        # If you store Razorpay status directly: processing/processed/failed/reversed/queued
+        is_final = txn.status in ("processed", "failed", "reversed")
+
+        return self.success_response(
+            data={
+                "id": txn.id,
+                "status": txn.status,
+                "is_final": is_final,
+                "failure_reason": txn.failure_reason or "",
+                "razorpay_payout_id": txn.razorpay_payout_id or "",
+                "updated_at": txn.updated_at,
+            },
+            message="Vendor payout status"
+        )
+
+
+
+class VendorPaymentRefreshStatusAPI(BaseAuthenticatedAPI):
+    """
+    POST: Refresh payout status from Razorpay and update DB
+    """
+
+    def post(self, request, transaction_id):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        try:
+            txn = VendorPaymentTransaction.objects.get(id=transaction_id, is_active=True)
+        except VendorPaymentTransaction.DoesNotExist:
+            return self.error_response(
+                message="Transaction not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        if not txn.razorpay_payout_id:
+            return self.error_response(
+                message="Payout not initiated yet",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            payout = razorpay_client.get(f"/v1/payouts/{txn.razorpay_payout_id}",{})
+        except Exception as e:
+            return self.error_response(
+                message="Failed to fetch payout status from Razorpay",
+                data={"error": str(e)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        rp_status = payout.get("status", "")
+        txn.status = rp_status or txn.status
+
+        if rp_status == "failed":
+            txn.failure_reason = (
+                payout.get("failure_reason")
+                or payout.get("status_details", {}).get("description")
+                or "Payout failed"
+            )
+        elif rp_status:
+            txn.failure_reason = ""
+
+        txn.save()
+
+        return self.success_response(
+            data={
+                "id": txn.id,
+                "status": txn.status,
+                "failure_reason": txn.failure_reason or "",
+                "razorpay_payout_id": txn.razorpay_payout_id,
+            },
+            message="Payout status refreshed"
         )
