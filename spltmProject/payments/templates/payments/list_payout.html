@@ -1,13 +1,203 @@
-{% extends "adminDashBoard.html" %} {% block content %}
+{% extends "adminDashBoard.html" %}
+{% block content %}
 
+<link rel="stylesheet" href="/static/assets/css/pagination.css" />
+
+<style>
+  .filter-card {
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+  }
+
+  .tx-row {
+    border: 1px solid #eef2f7;
+    border-radius: 14px;
+    padding: 14px 18px;
+    background: #fff;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .tx-row:hover {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+  }
+
+  .tx-title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .tx-meta {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .badge-type {
+    background: #eef2ff;
+    color: #4f46e5;
+  }
+
+  .btn-primary {
+    background-color: #94d600 !important;
+    border-color: #94d600 !important;
+  }
+</style>
 
 <div class="container-fluid mt-4">
   <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold">Payouts</h3>
+    <h3 class="fw-bold">Vendor Payouts</h3>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="card filter-card mb-4 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label">Search</label>
+          <input
+            type="text"
+            id="filter-search"
+            class="form-control"
+            placeholder="Vendor, UPI or purpose"
+          />
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Status</label>
+          <select id="filter-status" class="form-select">
+            <option value="">All</option>
+            <option value="initiated">Initiated</option>
+            <option value="processing">Processing</option>
+            <option value="processed">Processed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button id="apply-filter" class="btn btn-primary">
+            <i class="ti ti-filter"></i> Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYOUT LIST -->
+  <div id="transactions-container">
+    <div id="transactions-list" class="d-grid gap-3"></div>
+
+    <div class="pagination-wrapper">
+      <div class="pagination-pill">
+        <div id="transactions-pagination" class="d-flex"></div>
+        <div class="pg-info" id="pagination-info"></div>
+      </div>
+    </div>
   </div>
 </div>
 
+{% endblock %}
 
+{% block extra_js %}
+<script src="/static/assets/js/customJs/util.js"></script>
 
+<script>
+  let currentPage = 1;
+  const pageSize = 10;
+
+  async function loadPayouts() {
+    const params = {
+      pageNo: currentPage,
+      pageSize,
+      status: document.getElementById("filter-status")?.value || "",
+      search: document.getElementById("filter-search")?.value || "",
+    };
+
+    try {
+      const qs = new URLSearchParams(params).toString();
+      const url = `/api/payments/vendor/?${qs}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const resp = await response.json();
+      const items = resp.Data || [];
+      const totalPages = resp.TotalPages || 1;
+      const totalRecords = resp.TotalRecord || 0;
+
+      renderPayoutList(items);
+      displayPaginationInfo(
+        "pagination-info",
+        currentPage,
+        totalPages,
+        totalRecords
+      );
+
+      renderPagination(
+        "transactions-pagination",
+        currentPage,
+        totalPages,
+        (page) => {
+          currentPage = page;
+          loadPayouts();
+        }
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function renderPayoutList(payouts) {
+    const list = document.getElementById("transactions-list");
+    list.innerHTML = "";
+
+    if (!payouts.length) {
+      list.innerHTML = `
+        <div class="tx-row">
+          <div class="text-muted text-center">No payouts found</div>
+        </div>`;
+      return;
+    }
+
+    payouts.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "tx-row";
+      row.innerHTML = `
+        <div class="row align-items-center">
+          <div class="col-md-3">
+            <div class="tx-title">${p.vendor_name}</div>
+            <div class="tx-meta">UPI: ${p.vendor_upi}</div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="tx-meta">${p.purpose}</div>
+            <div class="tx-meta">📅 ${convertUtcToIndianTime(p.created_at)}</div>
+          </div>
+
+          <div class="col-md-2">
+            <span class="badge badge-type">${p.status_display || p.status}</span>
+          </div>
+
+          <div class="col-md-2 fw-semibold">
+            ₹ ${p.amount}
+          </div>
+
+          <div class="col-md-2 text-end text-muted">
+            #${p.id}
+          </div>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    loadPayouts();
+
+    document.getElementById("apply-filter").addEventListener("click", () => {
+      currentPage = 1;
+      loadPayouts();
+    });
+  });
+</script>
 {% endblock %}

@@ -8,6 +8,7 @@ from rest_framework import status
 from django.db.models import Q, Sum, Count
 import traceback
 import uuid
+from decimal import Decimal
 
 from common.api.base_api import BaseAuthenticatedAPI
 from payments.models import EventCollectionTransaction, VendorPaymentTransaction
@@ -431,12 +432,108 @@ class VendorPaymentCreateAPI(BaseAuthenticatedAPI):
         if not serializer.is_valid():
             return self.error_response("Validation failed", serializer.errors)
 
+        # Validate against event collected funds: do not allow creating
+        # a vendor payout larger than the total collected for the event
+        event_id = serializer.validated_data.get('event')
+        req_amount = serializer.validated_data.get('amount') or Decimal('0.00')
+
+        total_collected = (
+            EventCollectionTransaction.objects.filter(
+                event_id=event_id,
+                is_active=True,
+                status='completed'
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        # Subtract already initiated/processed vendor payouts for this event
+        processing_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event=event_id,
+                is_active=True,
+                status__in=("processing",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+        processed_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event=event_id,
+                is_active=True,
+                status__in=("processed",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        available_for_payout = (Decimal(total_collected) - Decimal(processing_payouts) - Decimal(processed_payouts))
+        if available_for_payout < Decimal('0.00'):
+            available_for_payout = Decimal('0.00')
+
+        if req_amount > available_for_payout:
+            return self.error_response(
+                message="Insufficient event funds",
+                data={
+                    "collected": str(total_collected),
+                    "processing_payouts": str(processing_payouts),
+                    "processed_payouts": str(processed_payouts),
+                    "available": str(available_for_payout),
+                    "requested": str(req_amount),
+                },
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
         txn = serializer.save()
 
         return self.success_response(
             VendorPaymentGetSerializer(txn).data,
             "Vendor payment created",
             status.HTTP_201_CREATED
+        )
+
+
+class VendorPaymentListAPI(BaseAuthenticatedAPI):
+    """
+    GET: List vendor payment transactions with pagination and filters
+    """
+
+    def get(self, request):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        page_no = int(request.query_params.get('pageNo', 1))
+        page_size = int(request.query_params.get('pageSize', 10))
+
+        status_filter = request.query_params.get('status', '').strip()
+        event_filter = request.query_params.get('event', '').strip()
+        search = request.query_params.get('search', '').strip()
+
+        query = VendorPaymentTransaction.objects.filter(is_active=True)
+
+        if status_filter:
+            query = query.filter(status__iexact=status_filter)
+
+        if event_filter:
+            try:
+                query = query.filter(event=int(event_filter))
+            except Exception:
+                pass
+
+        if search:
+            query = query.filter(
+                Q(vendor_name__icontains=search) | Q(vendor_upi__icontains=search) | Q(purpose__icontains=search)
+            )
+
+        query = query.order_by('-created_at')
+
+        total_count = query.count()
+        offset = (page_no - 1) * page_size
+        items = query[offset:offset + page_size]
+
+        serializer = VendorPaymentGetSerializer(items, many=True)
+
+        return self.paginated_response(
+            data=serializer.data,
+            page_no=page_no,
+            page_size=page_size,
+            total_record=total_count,
+            message="Vendor payouts retrieved successfully",
         )
 
 

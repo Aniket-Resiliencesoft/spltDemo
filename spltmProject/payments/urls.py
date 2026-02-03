@@ -9,6 +9,7 @@ from payments.api_views.transaction_api import (
     UserTransactionHistoryAPI,
     UserPaymentsSummaryAPI,
     VendorPaymentCreateAPI,
+    VendorPaymentListAPI,
     VendorPaymentPayoutAPI,
     VendorPaymentRefreshStatusAPI,
     VendorPaymentStatusAPI,
@@ -51,6 +52,7 @@ urlpatterns = [
     #
      # Step 3: Create vendor payment (DB entry only)
     path('api/payments/vendor/create/',VendorPaymentCreateAPI.as_view(),name='vendor-payment-create'),
+    path('api/payments/vendor/', VendorPaymentListAPI.as_view(), name='vendor-payment-list'),
 
     # Step 4: Trigger Razorpay payout (Owner ➜ Vendor)
     path('api/payments/vendor/<int:transaction_id>/payout/', VendorPaymentPayoutAPI.as_view(), name='vendor-payment-payout' ),

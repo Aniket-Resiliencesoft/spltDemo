@@ -162,6 +162,41 @@ class Event(BaseModel):
                 'email': getattr(cb, 'email', None),
             }
 
+        # ===== Vendor payouts info =====
+        try:
+            from payments.models import VendorPaymentTransaction
+        except Exception:
+            VendorPaymentTransaction = None
+
+        payouts_list = []
+        payouts_summary = {
+            'total_requested': Decimal('0.00'),
+            'total_processing': Decimal('0.00'),
+            'total_completed': Decimal('0.00'),
+            'total_failed': Decimal('0.00'),
+        }
+
+        if VendorPaymentTransaction:
+            pq = VendorPaymentTransaction.objects.filter(event=self.id, is_active=True)
+            payouts_summary['total_requested'] = pq.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            payouts_summary['total_processing'] = pq.filter(status='processing').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            payouts_summary['total_completed'] = pq.filter(status='completed').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            payouts_summary['total_failed'] = pq.filter(status='failed').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+            for p in pq.order_by('-created_at'):
+                payouts_list.append({
+                    'id': p.id,
+                    'vendor_name': p.vendor_name,
+                    'vendor_upi': p.vendor_upi,
+                    'amount': p.amount,
+                    'purpose': p.purpose,
+                    'status': p.status,
+                    'failure_reason': p.failure_reason,
+                    'razorpay_payout_id': p.razorpay_payout_id,
+                    'created_at': p.created_at,
+                    'updated_at': p.updated_at,
+                })
+
         return {
             'members': members,
             'due_date': self.due_pay_date_time,
@@ -171,4 +206,6 @@ class Event(BaseModel):
             'event_date': self.event_date,
             'start_date_time': self.start_date_time,
             'end_date_time': self.end_date_time,
+            'vendor_payouts_summary': payouts_summary,
+            'vendor_payouts': payouts_list,
         }
