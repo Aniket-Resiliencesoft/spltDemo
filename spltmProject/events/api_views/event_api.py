@@ -250,27 +250,39 @@ class EventDetailAPI(BaseAuthenticatedAPI):
         
         # Serialize
         serializer = EventGetSerializer(event)
+
+        # Default response values related to the requesting user
+        data = serializer.data
+        data['is_joined'] = False
+        data['user_payment'] = None
+
         # Attach logged-in user's payment details if they have a transaction for this event
-        user_payment = None
         current_user_id = self.get_user_id(request)
         if current_user_id is not None:
-            txn = EventCollectionTransaction.objects.filter(
+            # Consider only active transactions when deciding if user has joined
+            joined_exists = EventCollectionTransaction.objects.filter(
                 event_id=event.id,
                 user_id=current_user_id,
-            ).order_by('-transaction_date').first()
-            if txn:
-                user_payment = {
-                    'transaction_id': txn.id,
-                    'amount': float(txn.amount),
-                    'is_paid': str(txn.status).lower() == 'completed',
-                    'payment_status': txn.status,
-                    'payment_method': txn.payment_method,
-                    'transaction_date': txn.transaction_date.isoformat() if txn.transaction_date else None,
-                }
+                is_active=True
+            ).exists()
 
-        data = serializer.data
-        if user_payment is not None:
-            data['user_payment'] = user_payment
+            data['is_joined'] = bool(joined_exists)
+
+            if joined_exists:
+                txn = EventCollectionTransaction.objects.filter(
+                    event_id=event.id,
+                    user_id=current_user_id,
+                    is_active=True,
+                ).order_by('-transaction_date').first()
+                if txn:
+                    data['user_payment'] = {
+                        'transaction_id': txn.id,
+                        'amount': float(txn.amount),
+                        'is_paid': str(txn.status).lower() == 'completed',
+                        'payment_status': txn.status,
+                        'payment_method': txn.payment_method,
+                        'transaction_date': txn.transaction_date.isoformat() if txn.transaction_date else None,
+                    }
 
         # Return response
         return self.success_response(
@@ -564,5 +576,68 @@ class EventShareLinkAPI(BaseAuthenticatedAPI):
                 'event_category': share_data['event_category'],
             },
             message="Event share link generated successfully"
+        )
+
+
+class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
+    """GET: For the authenticated user, return all events they created
+    with collected amount per event and the total collected across those events.
+    """
+
+    def get(self, request):
+        # Check authentication
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        # Get request user id from token
+        user_id = self.get_user_id(request)
+        if not user_id:
+            return self.error_response(
+                message="Authentication required",
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Query events created by this user
+        events_qs = Event.objects.filter(created_by_id=user_id, is_active=True).order_by('-created_at')
+
+        # Annotate collected amount per event (only completed and active transactions)
+        from django.db.models import Q, Sum
+
+        annotated_qs = events_qs.annotate(
+            collected_amount=Sum(
+                'transactions__amount',
+                filter=Q(transactions__status='completed', transactions__is_active=True)
+            )
+        )
+
+        # Build response list
+        events_list = []
+        for ev in annotated_qs:
+            collected = ev.collected_amount or 0
+            events_list.append({
+                'event_id': ev.id,
+                'title': ev.title,
+                'event_date': ev.event_date,
+                'total_event_amount': float(ev.event_amount or 0),
+                'collected_amount': float(collected),
+                'status': ev.status,
+            })
+
+        # Total collected across all events
+        total_collected = annotated_qs.aggregate(
+            total=Sum(
+                'transactions__amount',
+                filter=Q(transactions__status='completed', transactions__is_active=True)
+            )
+        )['total'] or 0
+
+        return self.success_response(
+            data={
+                'events': events_list,
+                'events_total_collected': float(total_collected),
+                'events_count': annotated_qs.count(),
+            },
+            message="Creator events and collections retrieved successfully"
         )
 

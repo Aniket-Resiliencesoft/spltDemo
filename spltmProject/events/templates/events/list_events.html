@@ -167,6 +167,17 @@
       <ul id="detail-members" class="list-group list-group-flush"></ul>
     </div>
 
+    <hr>
+
+    <!-- Vendor Payouts -->
+    <div>
+      <h6 class="fw-bold mb-3">Vendor Payouts</h6>
+      <div id="detail-payout-summary" class="mb-3">
+        <!-- summary badges will be injected here -->
+      </div>
+      <ul id="detail-payouts" class="list-group list-group-flush"></ul>
+    </div>
+
   </div>
 </div>
 
@@ -347,6 +358,52 @@ function renderEventSummary(summary, eventId) {
         </div>
       `;
       membersList.appendChild(li);
+    });
+  }
+
+  /* ---------- Vendor Payouts ---------- */
+  const payoutSummaryEl = document.getElementById('detail-payout-summary');
+  const payoutsList = document.getElementById('detail-payouts');
+  payoutSummaryEl.innerHTML = '';
+  payoutsList.innerHTML = '';
+
+  const payoutSummary = summary.vendor_payouts_summary || {};
+  // Render summary badges
+  const sTotal = document.createElement('div');
+  sTotal.className = 'mb-2';
+  sTotal.innerHTML = `
+    <small class="text-muted me-3">Requested: ₹ ${payoutSummary.total_requested ?? 0}</small>
+    <small class="text-muted me-3">Processing: ₹ ${payoutSummary.total_processing ?? 0}</small>
+    <small class="text-muted me-3">Completed: ₹ ${payoutSummary.total_completed ?? 0}</small>
+    <small class="text-muted">Failed: ₹ ${payoutSummary.total_failed ?? 0}</small>
+  `;
+  payoutSummaryEl.appendChild(sTotal);
+
+  const payouts = summary.vendor_payouts || [];
+  if (!payouts.length) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item text-center text-muted';
+    li.innerText = 'No payouts found for this event';
+    payoutsList.appendChild(li);
+  } else {
+    payouts.forEach(p => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-start';
+      li.innerHTML = `
+        <div>
+          <strong>${p.vendor_name || p.vendor_upi}</strong><br>
+          <small class="text-muted">${p.purpose || ''} • ${convertUtcToIndianTime(p.created_at) || ''}</small>
+          ${p.failure_reason ? `<div class="text-danger small">${p.failure_reason}</div>` : ''}
+        </div>
+
+        <div class="text-end">
+          <div class="member-amount">₹ ${p.amount || 0}</div>
+          <span class="badge ${p.status === 'completed' ? 'badge-paid' : p.status === 'processing' ? 'badge-pending' : 'badge-failed'} text-capitalize">
+            ${p.status}
+          </span>
+        </div>
+      `;
+      payoutsList.appendChild(li);
     });
   }
 

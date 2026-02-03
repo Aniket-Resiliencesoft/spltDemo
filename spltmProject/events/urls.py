@@ -1,5 +1,6 @@
 from django.urls import path
 from events.api_views.event_api import (
+    CreatorEventCollectionsAPI,
     EventListAPI,
     EventJoinedListAPI,
     EventDetailAPI,
@@ -29,6 +30,8 @@ urlpatterns = [
     path('api/events/<int:event_id>/summary/', EventSummaryAPI.as_view()),
     # Share link generation
     path('api/events/<int:event_id>/share/', EventShareLinkAPI.as_view()),
+    # Creator's events collections summary
+    path('api/events/my-collections/', CreatorEventCollectionsAPI.as_view()),
     # UI create event page
     path('create/event/', ui_views.create_event_page),
     # UI events list page (standalone)

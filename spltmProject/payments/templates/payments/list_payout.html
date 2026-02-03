@@ -42,6 +42,21 @@
     background-color: #94d600 !important;
     border-color: #94d600 !important;
   }
+  .refresh-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    border: none;
+    background: #f3f4f6;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .refresh-btn:hover {
+    background: #e6eef8;
+  }
 </style>
 
 <div class="container-fluid mt-4">
@@ -181,14 +196,54 @@
           <div class="col-md-2 fw-semibold">
             ₹ ${p.amount}
           </div>
+          <div class="col-md-1">
+             <button type="button" class="btn btn-sm btn-light refresh-btn" data-id="${p.id}" title="Refresh status">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M21 12a9 9 0 10-3.22 6.44" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M21 3v6h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            </div>
 
-          <div class="col-md-2 text-end text-muted">
-            #${p.id}
+          <div class="col-md-1 text-end text-muted d-flex justify-content-end align-items-center">
+            <div class="me-2">#${p.id}</div>
+           
           </div>
         </div>
       `;
       list.appendChild(row);
+      // Attach click handler for the refresh button
+      const btn = row.querySelector('.refresh-btn');
+      if (btn) {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const txId = btn.getAttribute('data-id');
+          await refreshPayoutStatus(txId, btn);
+        });
+      }
     });
+  }
+
+  async function refreshPayoutStatus(transactionId, btn) {
+    if (!transactionId) return;
+    const origHtml = btn.innerHTML;
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+      const url = `/api/payments/vendor/${transactionId}/refresh-status/`;
+      const resp = await fetch(url, { method: 'POST' });
+      if (!resp.ok) {
+        console.error('Refresh failed', resp.status);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      // Reload list after refresh
+      loadPayouts();
+    }
   }
 
   document.addEventListener("DOMContentLoaded", function () {

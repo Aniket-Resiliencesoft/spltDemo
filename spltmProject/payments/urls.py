@@ -15,6 +15,7 @@ from payments.api_views.transaction_api import (
     VendorPaymentStatusAPI,
 )
 from payments.api_views.razorpay_webhook import razorpay_webhook
+from payments.api_views.razorpay_config_api import RazorpayConfigAPI
 from .api_views import (
     CreateOrderAPI,
     VerifyPaymentAPI,
@@ -48,6 +49,8 @@ urlpatterns = [
     path('api/payments/wallet/balance/', GetWalletBalanceAPI.as_view(), name='wallet-balance'),
     path('api/payments/wallet/ledger/', GetWalletLedgerAPI.as_view(), name='wallet-ledger'),
     path('api/payments/payout/initiate/', InitiatePayoutAPI.as_view(), name='initiate-payout'),
+    # Razorpay configuration (authenticated)
+    path('api/payments/razorpay-config/', RazorpayConfigAPI.as_view(), name='razorpay-config'),
     path('api/webhooks/razorpay/', WebhookHandlerAPI.as_view(), name='razorpay-webhook'),
     #
      # Step 3: Create vendor payment (DB entry only)

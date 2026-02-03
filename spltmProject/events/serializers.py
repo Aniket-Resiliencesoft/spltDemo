@@ -190,3 +190,6 @@ class EventSummarySerializer(serializers.Serializer):
     event_date = serializers.DateField()
     start_date_time = serializers.DateTimeField()
     end_date_time = serializers.DateTimeField()
+    # Vendor payouts summary and list (added to include payout details)
+    vendor_payouts_summary = serializers.DictField(child=serializers.DecimalField(max_digits=12, decimal_places=2), allow_empty=True)
+    vendor_payouts = serializers.ListField(child=serializers.DictField(), allow_empty=True)

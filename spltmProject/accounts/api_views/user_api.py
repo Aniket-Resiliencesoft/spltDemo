@@ -6,6 +6,9 @@ from django.contrib.auth.hashers import make_password
 from django.db.models import Q
 
 from accounts.models import Role, User, UserRole
+from events.models import Event
+from payments.models import EventCollectionTransaction
+from django.db.models import Sum, Max
 from accounts.serializer import (
     UserGetSerializer,
     UserCreateSerializer,
@@ -76,7 +79,61 @@ class UserDetailAPI(APIView):
             )
 
         serializer = UserGetSerializer(user)
-        return api_response_success(data=serializer.data)
+
+        # ===== Events the user has created =====
+        created_events = Event.objects.filter(created_by=user, is_active=True)
+
+        # ===== Events the user has joined (via payments) =====
+        joined_event_ids = EventCollectionTransaction.objects.filter(
+            user=user,
+            is_active=True
+        ).values_list('event_id', flat=True).distinct()
+
+        joined_events = Event.objects.filter(id__in=list(joined_event_ids), is_active=True)
+
+        # Build event list with role and payment aggregates
+        events = []
+
+        # Helper to compute payment aggregates for a user & event
+        def payment_aggregates(ev, usr):
+            qs = EventCollectionTransaction.objects.filter(event=ev, user=usr, is_active=True)
+            total_paid = qs.aggregate(total=Sum('amount'))['total'] or 0
+            last_tx = qs.aggregate(last_date=Max('transaction_date'))['last_date']
+            tx_count = qs.count()
+            return {
+                'total_paid': str(total_paid),
+                'last_payment_date': last_tx,
+                'transaction_count': tx_count,
+            }
+
+        # Include created events (organiser)
+        for ev in created_events:
+            agg = payment_aggregates(ev, user)
+            events.append({
+                'event_id': ev.id,
+                'title': ev.title,
+                'role': 'organiser',
+                'payment': agg,
+            })
+
+        # Include joined events where user is participant (avoid duplicates)
+        created_ids = {e['event_id'] for e in events}
+        for ev in joined_events:
+            if ev.id in created_ids:
+                # user is organiser and participant; mark organiser already added
+                continue
+            agg = payment_aggregates(ev, user)
+            events.append({
+                'event_id': ev.id,
+                'title': ev.title,
+                'role': 'participant',
+                'payment': agg,
+            })
+
+        data = serializer.data
+        data['events'] = events
+
+        return api_response_success(data=data)
 
 class UserCreateAPI(APIView):
     """

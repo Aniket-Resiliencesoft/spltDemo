@@ -12,6 +12,7 @@ from decimal import Decimal
 
 from common.api.base_api import BaseAuthenticatedAPI
 from payments.models import EventCollectionTransaction, VendorPaymentTransaction
+from events.models import Event
 from payments.serializers import (
     EventCollectionTransactionGetSerializer,
     EventCollectionTransactionCreateSerializer,
@@ -426,15 +427,47 @@ class UserPaymentsSummaryAPI(BaseAuthenticatedAPI):
 class VendorPaymentCreateAPI(BaseAuthenticatedAPI):
 
     def post(self, request):
-        self.require_authentication(request)
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        # Ensure the requesting user is available
+        request_user_id = self.get_user_id(request)
+        if not request_user_id:
+            return self.error_response(
+                message="Authentication required",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
 
         serializer = VendorPaymentCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return self.error_response("Validation failed", serializer.errors)
 
-        # Validate against event collected funds: do not allow creating
-        # a vendor payout larger than the total collected for the event
+        # Ensure the requester is the event organiser
         event_id = serializer.validated_data.get('event')
+        try:
+            event_obj = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            return self.error_response(
+                message="Event not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # event.created_by is FK to User; compare IDs (cast to int to avoid string mismatches)
+        try:
+            organiser_id = int(getattr(event_obj.created_by, 'id', None))
+            requester_id = int(request_user_id)
+        except Exception:
+            organiser_id = getattr(event_obj.created_by, 'id', None)
+            requester_id = request_user_id
+
+        if organiser_id != requester_id:
+            return self.error_response(
+                message="Only the event organiser can can pay to vender",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Force initiated_by to the requesting user (ignore client-supplied value)
         req_amount = serializer.validated_data.get('amount') or Decimal('0.00')
 
         total_collected = (
@@ -478,7 +511,7 @@ class VendorPaymentCreateAPI(BaseAuthenticatedAPI):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        txn = serializer.save()
+        txn = serializer.save(initiated_by=request_user_id)
 
         return self.success_response(
             VendorPaymentGetSerializer(txn).data,
