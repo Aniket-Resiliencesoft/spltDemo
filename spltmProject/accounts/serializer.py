@@ -145,3 +145,5 @@ class OTPVerifySerializer(serializers.Serializer):
         min_length=6
     )
 
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField(required=True)

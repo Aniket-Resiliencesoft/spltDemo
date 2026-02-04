@@ -1,3 +1,4 @@
+import uuid
 import jwt
 from datetime import datetime, timedelta
 
@@ -8,14 +9,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from accounts.models import User, UserRole
+from accounts.models import RefreshToken, User, UserRole
 from accounts.serializer import (
     LoginSerializer,
     OTPGenerateSerializer,
-    OTPVerifySerializer
+    OTPVerifySerializer,
+    RefreshTokenSerializer
 )
 from common.utils.email_service import send_otp_email
 from common.responses import api_response_success, api_response_error
+from common.utils.jwt_utils import generate_jwt_token
 
 
 # ==========================================================
@@ -169,7 +172,11 @@ class LoginAPI(APIView):
                 minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
             ),
         }
-
+        refresh_token_value = str(uuid.uuid4())
+        RefreshToken.objects.create(
+            user=user,
+            token=refresh_token_value
+        )
         token = jwt.encode(
             payload,
             settings.JWT_SECRET_KEY,
@@ -178,6 +185,7 @@ class LoginAPI(APIView):
 
         return {
             "access_token": token,
+            "refresh_token": refresh_token_value,
             "token_type": "Bearer",
             "expires_in": settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             "user": {
@@ -188,6 +196,71 @@ class LoginAPI(APIView):
             }
         }
     
+class RefreshTokenAPI(APIView):
+    """
+    POST:
+    Generate new ACCESS token using refresh token
+    """
+
+    def post(self, request):
+        serializer = RefreshTokenSerializer(data=request.data)
+        if not serializer.is_valid():
+            return auth_response(
+                False,
+                "Invalid input",
+                serializer.errors,
+                status.HTTP_400_BAD_REQUEST
+            )
+
+        refresh_token_value = serializer.validated_data["refresh_token"]
+
+        try:
+            refresh_token = RefreshToken.objects.select_related("user").get(
+                token=refresh_token_value,
+                is_revoked=False
+            )
+        except RefreshToken.DoesNotExist:
+            return auth_response(
+                False,
+                "Invalid or revoked refresh token",
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user = refresh_token.user
+
+        # Fetch role
+        user_role = (
+            UserRole.objects
+            .select_related("role")
+            .filter(user=user, is_active=True)
+            .first()
+        )
+        role_name = user_role.role.name if user_role else "User"
+
+        # Generate ACCESS token
+        access_token = generate_jwt_token({
+            "user_id": str(user.id),
+            "email": user.email,
+            "role": role_name
+        })
+
+        # SAME RESPONSE STRUCTURE AS LOGIN
+        return auth_response(
+            True,
+            "Access token refreshed successfully",
+            {
+                "access_token": access_token,
+                "refresh_token": refresh_token_value,
+                "token_type": "Bearer",
+                "expires_in": settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "role": role_name
+                }
+            }
+        )
 
 # ==========================================================
 # OTP GENERATE API

@@ -3,7 +3,8 @@ Event API Views
 
 Endpoints for creating, retrieving, updating, and deleting events.
 """
-
+from django.utils import timezone
+from datetime import timedelta
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q, Sum, Count, F
 from rest_framework import status
@@ -208,6 +209,14 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
             
             serializer = EventListSerializer(event)
             event_data = serializer.data
+            today = timezone.now().date()
+            end_plus_one = (event.end_date_time + timedelta(days=1)).date()
+
+            if today >= end_plus_one and event.status != 'cancelled':
+                derived_event_status = 'completed'
+            else:
+                derived_event_status = event.status
+
             event_data['status'] = 'joined'
             event_data['total_event_amount'] = float(event.event_amount)
             event_data['contributed_amount'] = float(user_transactions['total_contributed'] or 0.0)
@@ -215,6 +224,7 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
             event_data['transaction_status'] = latest_transaction.status if latest_transaction else 'pending'
             event_data['user_id'] = current_user_id
             event_data['event_id'] = event.id
+            event_data['event_status'] = derived_event_status
             
             serialized_data.append(event_data)
         

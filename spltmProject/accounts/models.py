@@ -3,6 +3,7 @@ from common.models import BaseModel
 import random
 from datetime import timedelta
 from django.utils import timezone
+from django.db import models
 
 class Role(BaseModel):
     name = models.CharField(max_length=50, unique=True)
@@ -69,6 +70,15 @@ class User(BaseModel):
     
     class Meta:
         db_table = "users"
+
+class RefreshToken(models.Model):
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    token = models.CharField(max_length=500, unique=True)
+    is_revoked = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "refresh_tokens"
 
 class UserRole(BaseModel):
     user = models.ForeignKey('User', on_delete=models.CASCADE)
