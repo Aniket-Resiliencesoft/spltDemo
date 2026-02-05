@@ -13,6 +13,9 @@ from payments.api_views.transaction_api import (
     VendorPaymentPayoutAPI,
     VendorPaymentRefreshStatusAPI,
     VendorPaymentStatusAPI,
+    VendorPaymentCreateWalletAPI,
+    VendorPaymentPayoutWalletAPI,
+    OrganizerWalletBalanceAPI,
 )
 from payments.api_views.razorpay_webhook import razorpay_webhook
 from payments.api_views.razorpay_config_api import RazorpayConfigAPI
@@ -64,6 +67,15 @@ urlpatterns = [
 
     # refresh payout status from Razorpay (optional)
     path("api/payments/vendor/<int:transaction_id>/refresh-status/", VendorPaymentRefreshStatusAPI.as_view(), name="vendor-payment-refresh-status",),
+    
+    # =========================
+    # WALLET-BASED VENDOR PAYMENT APIs
+    # Validates against organizer's total wallet balance
+    # across all their events (not event-specific)
+    # =========================
+    path('api/payments/vendor-wallet/create/', VendorPaymentCreateWalletAPI.as_view(), name='vendor-payment-wallet-create'),
+    path('api/payments/vendor-wallet/<int:transaction_id>/payout/', VendorPaymentPayoutWalletAPI.as_view(), name='vendor-payment-wallet-payout'),
+    path('api/organizer/wallet/balance/', OrganizerWalletBalanceAPI.as_view(), name='organizer-wallet-balance'),
     # =========================
     # Webhooks
     # =========================

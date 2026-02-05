@@ -42,6 +42,7 @@
     background-color: #94d600 !important;
     border-color: #94d600 !important;
   }
+  
   .refresh-btn {
     width: 36px;
     height: 36px;
@@ -54,8 +55,33 @@
     justify-content: center;
     padding: 0;
   }
+  
   .refresh-btn:hover {
     background: #e6eef8;
+  }
+
+  .txn-id-display {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #1f2937;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    margin-top: 4px;
+    user-select: all;
+    cursor: pointer;
+  }
+
+  .txn-id-display:hover {
+    background: #e5e7eb;
+  }
+
+  .txn-id-label {
+    font-weight: 600;
+    font-size: 12px;
+    color: #374151;
+    margin-bottom: 4px;
   }
 </style>
 
@@ -186,7 +212,7 @@
 
           <div class="col-md-3">
             <div class="tx-meta">${p.purpose}</div>
-            <div class="tx-meta">ðŸ“… ${convertUtcToIndianTime(p.created_at)}</div>
+            <div class="tx-meta">📅 ${convertUtcToIndianTime(p.created_at)}</div>
           </div>
 
           <div class="col-md-1">
@@ -194,19 +220,32 @@
           </div>
 
           <div class="col-md-1 fw-semibold">
-            â‚¹ ${p.amount}
+            ₹ ${p.amount}
           </div>
-          <div class="col-md-1">
+
+          <div class="col-md-2">
+            ${p.razorpay_payout_id ? `
+              <div class="txn-id-label">
+                🔗 Transaction ID
+              </div>
+              <div class="txn-id-display" title="Click to select all">
+                ${p.razorpay_payout_id}
+              </div>
+            ` : `
+              <div class="tx-meta text-muted">⏳ Pending</div>
+            `}
+          </div>
+
+          <div class="col-md-1 text-center">
              <button type="button" class="btn btn-sm btn-light refresh-btn" data-id="${p.id}" title="Refresh status">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M21 12a9 9 0 10-3.22 6.44" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M21 3v6h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            </div>
+          </div>
 
           <div class="col-md-3 text-end text-muted d-flex justify-content-end align-items-center">
-            <div class="me-2">#${p.razorpay_payout_id}</div>
            
           </div>
         </div>

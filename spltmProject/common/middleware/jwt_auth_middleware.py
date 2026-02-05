@@ -8,7 +8,8 @@ EXEMPT_URLS = (
     '/api/users/create/',
     '/api/auth/generateOTP',
     '/api/auth/verifyOTP',
-    '/api/auth/refresh-token/'
+    '/api/auth/refresh-token/',
+    '/api/profile/register/'
 )
 
 class JWTAuthenticationMiddleware:

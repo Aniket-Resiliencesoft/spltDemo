@@ -10,6 +10,11 @@ from accounts.api_views.user_api import (
     UserUpdateAPI,
     UserDeleteAPI
 )
+from accounts.api_views.profile_api import (
+    ProfileRegisterAPI,
+    ProfileGetByIdAPI,
+    ProfileUpdateAPI
+)
 from accounts.api_views.roles_api import (
     RoleCreateAPI,
     RoleListAPI,
@@ -25,6 +30,12 @@ urlpatterns = [
     path('api/users/create/', UserCreateAPI.as_view()),
     path('api/users/<int:user_id>/update/', UserUpdateAPI.as_view()),
     path('api/users/<int:user_id>/delete/', UserDeleteAPI.as_view()),
+]
+
+urlpatterns += [
+    path('api/profile/register/', ProfileRegisterAPI.as_view()),
+    path('api/profile/<int:user_id>/', ProfileGetByIdAPI.as_view()),
+    path('api/profile/<int:user_id>/update/', ProfileUpdateAPI.as_view()),
 ]
 
 urlpatterns += [
