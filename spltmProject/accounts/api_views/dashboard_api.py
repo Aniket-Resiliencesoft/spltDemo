@@ -11,7 +11,7 @@ from common.api.base_api import BaseAuthenticatedAPI
 from accounts.models import User
 from events.models import Event
 from payments.models import EventCollectionTransaction
-
+from payments.models import EventCollectionTransaction, RazorpayOrder, RazorpayPayout, VendorPaymentTransaction
 
 class DashboardStatsAPI(BaseAuthenticatedAPI):
     """
@@ -50,11 +50,18 @@ class DashboardStatsAPI(BaseAuthenticatedAPI):
                 status='pending'
             ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
 
+            payout_payment = VendorPaymentTransaction.objects.filter(
+                    is_active=True,
+                    status='PROCESSED'
+                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+
             stats = {
                 'total_users': total_users,
                 'active_events': active_events,
                 'total_payment': float(total_payment),
                 'pending_payment': float(pending_payment),
+                'pay_Outs' : float(payout_payment),
             }
 
             return self.success_response(

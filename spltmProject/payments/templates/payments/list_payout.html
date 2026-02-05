@@ -186,15 +186,15 @@
 
           <div class="col-md-3">
             <div class="tx-meta">${p.purpose}</div>
-            <div class="tx-meta">📅 ${convertUtcToIndianTime(p.created_at)}</div>
+            <div class="tx-meta">ðŸ“… ${convertUtcToIndianTime(p.created_at)}</div>
           </div>
 
-          <div class="col-md-2">
+          <div class="col-md-1">
             <span class="badge badge-type">${p.status_display || p.status}</span>
           </div>
 
-          <div class="col-md-2 fw-semibold">
-            ₹ ${p.amount}
+          <div class="col-md-1 fw-semibold">
+            â‚¹ ${p.amount}
           </div>
           <div class="col-md-1">
              <button type="button" class="btn btn-sm btn-light refresh-btn" data-id="${p.id}" title="Refresh status">
@@ -205,8 +205,8 @@
             </button>
             </div>
 
-          <div class="col-md-1 text-end text-muted d-flex justify-content-end align-items-center">
-            <div class="me-2">#${p.id}</div>
+          <div class="col-md-3 text-end text-muted d-flex justify-content-end align-items-center">
+            <div class="me-2">#${p.razorpay_payout_id}</div>
            
           </div>
         </div>

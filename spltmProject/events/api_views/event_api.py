@@ -101,12 +101,19 @@ class EventListAPI(BaseAuthenticatedAPI):
             
             serializer = EventListSerializer(event)
             event_data = serializer.data
+            today = timezone.now().date()
+            end_plus_one = (event.end_date_time + timedelta(days=1)).date()
+
+            if today >= end_plus_one and event.status != 'cancelled':
+                derived_event_status = 'completed'
+            else:
+                derived_event_status = event.status
             event_data['event_id'] = event.id
             event_data['created_by_id'] = event.created_by_id
             event_data['total_event_amount'] = float(event.event_amount)
             event_data['participants_count'] = participants_count
             event_data['total_contributed'] = float(total_contributed)
-            
+            event_data['event_status'] = derived_event_status
             serialized_data.append(event_data)
         
         # Return paginated response with total record count

@@ -688,13 +688,13 @@
         </a>
 
         <!-- Vendors Card -->
-        <a href="{}" class="stat-card">
+        <a  href="{% url 'list_payouts' %}" class="stat-card">
           <div class="card-icon vendors">
             <i class="fas fa-store"></i>
           </div>
           <div class="card-content">
-            <h3>Vendors</h3>
-            <div class="card-number" id="vendorsCount">
+            <h3>Payput</h3>
+            <div class="card-number" id="payOutCount">
               0
               <!-- <span class="loading"></span> -->
             </div>
@@ -794,6 +794,10 @@
                   $("#paymentsCount"),
                   Math.round(data.total_payment || 0),
                 );
+                if($("#payOutCount").length)
+                {
+                     animateCounter($("#payOutCount"), data.pay_Outs || 0);
+                }
               }
 
               // Log pending payment for reference
