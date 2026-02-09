@@ -7,7 +7,6 @@ from events.models import Event
 from decimal import Decimal, ROUND_HALF_UP
 
 class EventGetSerializer(serializers.ModelSerializer):
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
 
@@ -19,17 +18,17 @@ class EventGetSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'category',
-            'category_display',
             'description',
             'event_date',
             'start_date_time',
             'end_date_time',
             'due_pay_date_time',
+            'due_pay_before_event_start',
             'latitude',
             'longitude',
             'persons_count',
             'event_amount',
-            'per_person_amount',  # ✅
+            'per_person_amount',
             'status',
             'status_display',
             'created_by',
@@ -50,7 +49,13 @@ class EventGetSerializer(serializers.ModelSerializer):
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating new events"""
+    """Serializer for creating new events
+    
+    Fields:
+    - due_pay_before_event_start: Boolean
+        - True: Due pay date must be before event start (mandatory field)
+        - False: Due pay date can be after event start (optional field)
+    """
     
     class Meta:
         model = Event
@@ -62,6 +67,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
             'start_date_time',
             'end_date_time',
             'due_pay_date_time',
+            'due_pay_before_event_start',
             'latitude',
             'longitude',
             'persons_count',
@@ -78,7 +84,8 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
         Rules:
         - start_date_time < end_date_time
-        - due_pay_date_time must be <= start_date_time
+        - If due_pay_before_event_start=True: due_pay_date_time is MANDATORY and must be <= start_date_time
+        - If due_pay_before_event_start=False: due_pay_date_time is OPTIONAL and can be any datetime
         - due_pay_date_time.date() must be <= event_date
         - persons_count >= 1
         """
@@ -87,6 +94,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
         end_dt = data.get('end_date_time')          # datetime
         due_dt = data.get('due_pay_date_time')      # datetime
         event_date = data.get('event_date')         # date
+        due_pay_before = data.get('due_pay_before_event_start', True)  # Boolean
 
         # 1️⃣ Start must be before end
         if start_dt and end_dt and start_dt >= end_dt:
@@ -94,17 +102,29 @@ class EventCreateSerializer(serializers.ModelSerializer):
                 "Start datetime must be before end datetime."
             )
 
-        # 2️⃣ Due date must be before or equal to start datetime
-        if due_dt and start_dt and due_dt > start_dt:
-            raise serializers.ValidationError(
-                "Due pay date must be before event start time."
-            )
+        # 2️⃣ Validate due_pay_date_time based on due_pay_before_event_start flag
+        if due_pay_before:
+            # If due_pay_before_event_start=True, due_pay_date_time is MANDATORY
+            if not due_dt:
+                raise serializers.ValidationError(
+                    "Due pay date is mandatory when 'due_pay_before_event_start' is True."
+                )
+            
+            # Due date must be before or equal to start datetime
+            if due_dt and start_dt and due_dt > start_dt:
+                raise serializers.ValidationError(
+                    "Due pay date must be before event start time when 'due_pay_before_event_start' is True."
+                )
+        else:
+            # If due_pay_before_event_start=False, due_pay_date_time is OPTIONAL
+            # No mandatory check needed
+            pass
 
-        # 3️⃣ Due date must not be after event date
-        if due_dt and event_date and due_dt.date() > event_date:
-            raise serializers.ValidationError(
-                "Due pay date cannot be after event date."
-            )
+        # # 3️⃣ Due date must not be after event date (if provided)
+        # if due_dt and event_date and due_dt.date() > event_date:
+        #     raise serializers.ValidationError(
+        #         "Due pay date cannot be after event date."
+        #     )
 
         # 4️⃣ Persons count validation
         if data.get('persons_count', 1) < 1:
@@ -128,6 +148,7 @@ class EventUpdateSerializer(serializers.ModelSerializer):
             'start_date_time',
             'end_date_time',
             'due_pay_date_time',
+            'due_pay_before_event_start',
             'latitude',
             'longitude',
             'persons_count',
@@ -143,11 +164,23 @@ class EventUpdateSerializer(serializers.ModelSerializer):
         end_dt = data.get('end_date_time', self.instance.end_date_time)
         due_date = data.get('due_pay_date_time', self.instance.due_pay_date_time)
         event_date = data.get('event_date', self.instance.event_date)
+        due_pay_before = data.get('due_pay_before_event_start', self.instance.due_pay_before_event_start)
         
         if start_dt >= end_dt:
             raise serializers.ValidationError(
                 "Start datetime must be before end datetime."
             )
+        
+        # Validate based on due_pay_before_event_start flag
+        if due_pay_before:
+            if not due_date:
+                raise serializers.ValidationError(
+                    "Due pay date is mandatory when 'due_pay_before_event_start' is True."
+                )
+            if due_date > start_dt:
+                raise serializers.ValidationError(
+                    "Due pay date must be before event start time when 'due_pay_before_event_start' is True."
+                )
         
         if due_date and due_date < event_date:
             raise serializers.ValidationError(
@@ -160,7 +193,6 @@ class EventUpdateSerializer(serializers.ModelSerializer):
 class EventListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
     
@@ -170,7 +202,6 @@ class EventListSerializer(serializers.ModelSerializer):
             'id',
             'title',
             'category',
-            'category_display',
             'event_date',
             'status',
             'status_display',

@@ -29,6 +29,8 @@ class EventCollectionTransactionGetSerializer(serializers.ModelSerializer):
             'status_display',
             'description',
             'payment_method',
+            'razorpay_order_id',
+            'razorpay_payment_id',
             'transaction_date',
             'is_active',
             'created_at',
@@ -55,6 +57,8 @@ class EventCollectionTransactionCreateSerializer(serializers.ModelSerializer):
             'status',
             'description',
             'payment_method',
+            'razorpay_order_id',
+            'razorpay_payment_id',
         ]
     
     def validate_amount(self, value):
@@ -98,6 +102,8 @@ class EventCollectionTransactionListSerializer(serializers.ModelSerializer):
             'transaction_type_display',
             'status',
             'status_display',
+            'razorpay_order_id',
+            'razorpay_payment_id',
             'transaction_date',
         ]
 

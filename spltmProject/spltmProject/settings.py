@@ -27,7 +27,12 @@ SECRET_KEY = 'django-insecure-7@c$rjygrsp&q&-iuld19thtk104%78!ju_8$bd%&k1$92w1!z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'sylvia-unflaking-maximo.ngrok-free.dev'
+]
+
 
 
 # Application definition

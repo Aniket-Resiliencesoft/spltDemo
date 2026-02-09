@@ -793,3 +793,371 @@ class VendorPaymentRefreshStatusAPI(BaseAuthenticatedAPI):
             },
             message="Payout status refreshed"
         )
+
+
+# ==============================================
+# WALLET-BASED VENDOR PAYMENT APIs
+# Validates against organizer's total wallet balance
+# across all their created events
+# ==============================================
+
+class VendorPaymentCreateWalletAPI(BaseAuthenticatedAPI):
+    """
+    POST: Create vendor payment using organizer's wallet balance
+    
+    VALIDATION:
+    - Organizer's wallet balance = Total amount collected across ALL events they created
+    - Organizer can spend up to their wallet balance regardless of which event
+    - Cannot spend more than wallet balance
+    
+    Payload: Same as VendorPaymentCreateAPI
+    """
+
+    def post(self, request):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        # Ensure the requesting user is available
+        request_user_id = self.get_user_id(request)
+        if not request_user_id:
+            return self.error_response(
+                message="Authentication required",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        serializer = VendorPaymentCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed", serializer.errors)
+
+        # Ensure the requester is the event organiser
+        event_id = serializer.validated_data.get('event')
+        try:
+            event_obj = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            return self.error_response(
+                message="Event not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verify requester is the event organiser
+        try:
+            organiser_id = int(getattr(event_obj.created_by, 'id', None))
+            requester_id = int(request_user_id)
+        except Exception:
+            organiser_id = getattr(event_obj.created_by, 'id', None)
+            requester_id = request_user_id
+
+        if organiser_id != requester_id:
+            return self.error_response(
+                message="Only the event organiser can create vendor payments",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        req_amount = serializer.validated_data.get('amount') or Decimal('0.00')
+
+        # ===== Calculate Wallet Balance (across ALL organizer's events) =====
+        # Get all event IDs created by this organizer
+        organizer_event_ids = Event.objects.filter(
+            created_by_id=requester_id,
+            is_active=True
+        ).values_list('id', flat=True)
+        
+        # Total collected amount across ALL events created by this organizer
+        total_wallet_collected = (
+            EventCollectionTransaction.objects.filter(
+                event_id__in=organizer_event_ids,
+                is_active=True,
+                status='completed'
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        # Subtract ALL vendor payouts (processing + processed) for ALL organizer's events
+        all_processing_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event__in=organizer_event_ids,
+                is_active=True,
+                status__in=("processing",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+        
+        all_processed_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event__in=organizer_event_ids,
+                is_active=True,
+                status__in=("processed",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        wallet_balance = (
+            Decimal(total_wallet_collected) - 
+            Decimal(all_processing_payouts) - 
+            Decimal(all_processed_payouts)
+        )
+        
+        if wallet_balance < Decimal('0.00'):
+            wallet_balance = Decimal('0.00')
+
+        # Validate requested amount against wallet balance
+        if req_amount > wallet_balance:
+            return self.error_response(
+                message="Insufficient wallet balance",
+                data={
+                    "total_collected": str(total_wallet_collected),
+                    "processing_payouts": str(all_processing_payouts),
+                    "processed_payouts": str(all_processed_payouts),
+                    "wallet_balance": str(wallet_balance),
+                    "requested_amount": str(req_amount),
+                },
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create the vendor payment transaction
+        txn = serializer.save(initiated_by=request_user_id)
+
+        return self.success_response(
+            VendorPaymentGetSerializer(txn).data,
+            "Vendor payment created (wallet-based)",
+            status.HTTP_201_CREATED
+        )
+
+
+class VendorPaymentPayoutWalletAPI(BaseAuthenticatedAPI):
+    """
+    POST: Initiate RazorpayX payout for wallet-based vendor payment
+    Uses organizer's wallet balance (total across all their events)
+    """
+
+    def post(self, request, transaction_id):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        try:
+            txn = VendorPaymentTransaction.objects.get(id=transaction_id, is_active=True)
+        except VendorPaymentTransaction.DoesNotExist:
+            return self.error_response(
+                message="Transaction not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        if txn.razorpay_payout_id:
+            return self.error_response(
+                message="Payout already initiated",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validations
+        if not txn.vendor_name:
+            return self.error_response(
+                message="Vendor name is missing",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not txn.vendor_upi or "@" not in txn.vendor_upi:
+            return self.error_response(
+                message="Invalid or missing vendor UPI",
+                data={"vendor_upi": txn.vendor_upi},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        account_number = getattr(settings, "RAZORPAY_ACCOUNT_NUMBER", None)
+        if not account_number:
+            return self.error_response(
+                message="RAZORPAY_ACCOUNT_NUMBER not configured",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        if txn.amount is None or txn.amount <= 0:
+            return self.error_response(
+                message="Invalid payout amount",
+                data={"amount": str(txn.amount)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Create Razorpay contact
+            contact = razorpay_client.post("/v1/contacts", {
+                "name": str(txn.vendor_name).strip(),
+                "type": "vendor"
+            })
+            contact_id = contact.get("id")
+            if not contact_id:
+                raise Exception(f"Contact creation failed: {contact}")
+
+            # Create fund account
+            fund_account = razorpay_client.post("/v1/fund_accounts", {
+                "contact_id": contact_id,
+                "account_type": "vpa",
+                "vpa": {"address": txn.vendor_upi}
+            })
+            fund_account_id = fund_account.get("id")
+            if not fund_account_id:
+                raise Exception(f"Fund account creation failed: {fund_account}")
+
+            # Create payout
+            payout_payload = {
+                "account_number": account_number,
+                "fund_account_id": fund_account_id,
+                "amount": int(txn.amount * 100),
+                "currency": "INR",
+                "mode": "UPI",
+                "purpose": "payout",
+                "queue_if_low_balance": True
+            }
+
+            idempotency_key = str(uuid.uuid4())
+
+            payout = razorpay_client.post(
+                "/v1/payouts",
+                payout_payload,
+                headers={"X-Payout-Idempotency": idempotency_key}
+            )
+
+            payout_id = payout.get("id")
+            if not payout_id:
+                raise Exception(f"Payout creation failed: {payout}")
+
+            # Update transaction with Razorpay details
+            txn.razorpay_contact_id = contact_id
+            txn.razorpay_fund_account_id = fund_account_id
+            txn.razorpay_payout_id = payout_id
+            txn.status = payout.get("status", "processing")
+            txn.failure_reason = ""
+            txn.save()
+
+            return self.success_response(
+                data=VendorPaymentGetSerializer(txn).data,
+                message="Vendor payout initiated (wallet-based)",
+                status_code=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            print("---- Razorpay payout exception (wallet-based) ----")
+            print("type:", type(e))
+            print("str:", str(e))
+            print("repr:", repr(e))
+            print("args:", getattr(e, "args", None))
+            traceback.print_exc()
+
+            reason = str(e) or repr(e) or "Razorpay payout failed"
+
+            txn.status = "failed"
+            txn.failure_reason = reason[:255]
+            txn.save()
+
+            return self.error_response(
+                message="Payout failed",
+                data={"error": reason},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class OrganizerWalletBalanceAPI(BaseAuthenticatedAPI):
+    """
+    GET: Get organizer's wallet balance (total collected across all their events)
+    
+    Returns:
+    - total_collected: Total amount collected across all organizer's events
+    - processing_payouts: Total amount in processing payout transactions
+    - processed_payouts: Total amount already processed
+    - wallet_balance: Available balance (collected - processing - processed)
+    - event_count: Number of events created by organizer
+    - events_breakdown: List of each event with their collections
+    """
+
+    def get(self, request):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        request_user_id = self.get_user_id(request)
+        if not request_user_id:
+            return self.error_response(
+                message="Authentication required",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Get all event IDs created by this organizer
+        organizer_event_ids = Event.objects.filter(
+            created_by_id=request_user_id,
+            is_active=True
+        ).values_list('id', flat=True)
+
+        # Total collected across all organizer's events
+        total_collected = (
+            EventCollectionTransaction.objects.filter(
+                event_id__in=organizer_event_ids,
+                is_active=True,
+                status='completed'
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        # All payouts being processed
+        processing_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event__in=organizer_event_ids,
+                is_active=True,
+                status__in=("processing",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        # All payouts processed
+        processed_payouts = (
+            VendorPaymentTransaction.objects.filter(
+                event__in=organizer_event_ids,
+                is_active=True,
+                status__in=("processed",)
+            ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+        )
+
+        wallet_balance = (
+            Decimal(total_collected) - 
+            Decimal(processing_payouts) - 
+            Decimal(processed_payouts)
+        )
+        
+        if wallet_balance < Decimal('0.00'):
+            wallet_balance = Decimal('0.00')
+
+        # Get breakdown by event
+        events_breakdown = (
+            EventCollectionTransaction.objects
+            .filter(
+                event_id__in=organizer_event_ids,
+                is_active=True,
+                status='completed'
+            )
+            .values('event_id', 'event__title')
+            .annotate(collected=Sum('amount'))
+            .order_by('-collected')
+        )
+
+        # Event count
+        event_count = Event.objects.filter(
+            created_by_id=request_user_id,
+            is_active=True
+        ).count()
+
+        data = {
+            'organizer_id': request_user_id,
+            'total_collected': str(total_collected),
+            'processing_payouts': str(processing_payouts),
+            'processed_payouts': str(processed_payouts),
+            'wallet_balance': str(wallet_balance),
+            'event_count': event_count,
+            'events_breakdown': [
+                {
+                    'event_id': item['event_id'],
+                    'event_title': item['event__title'],
+                    'amount_collected': str(item['collected']),
+                }
+                for item in events_breakdown
+            ],
+        }
+
+        return self.success_response(
+            data=data,
+            message="Organizer wallet balance retrieved"
+        )
+
