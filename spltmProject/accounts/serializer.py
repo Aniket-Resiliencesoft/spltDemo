@@ -4,6 +4,7 @@ from accounts.models import User, Role, UserRole
 
 class UserGetSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -17,6 +18,7 @@ class UserGetSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'role',
+            'profile_image_url',
         ]
 
     def get_role(self, obj):
@@ -30,6 +32,12 @@ class UserGetSerializer(serializers.ModelSerializer):
                 "name": user_role.role.name
             }
 
+        return None
+
+    def get_profile_image_url(self, obj):
+        """Return profile image URL if image exists, otherwise None"""
+        if obj.profile_image:
+            return obj.profile_image.url
         return None
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -147,3 +155,73 @@ class OTPVerifySerializer(serializers.Serializer):
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh_token = serializers.CharField(required=True)
+
+
+# =======================================
+# Profile APIs Serializers
+# =======================================
+
+class ProfileRegisterSerializer(serializers.ModelSerializer):
+    """
+    Serializer for user registration with profile image.
+    Accepts: full_name, email, contact_no, password, profile_image (optional)
+    """
+    password = serializers.CharField(write_only=True, required=True, min_length=6)
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'full_name',
+            'email',
+            'contact_no',
+            'password',
+            'profile_image',
+        ]
+
+    def validate_email(self, value):
+        """Validate that email is unique"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email already exists")
+        return value
+
+    def validate_contact_no(self, value):
+        """Validate contact number length"""
+        if len(value) < 10:
+            raise serializers.ValidationError("Contact number must be at least 10 digits")
+        if len(value) > 15:
+            raise serializers.ValidationError("Contact number cannot exceed 15 digits")
+        return value
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user profile information.
+    Accepts: full_name, contact_no, password, profile_image, status (all optional)
+    """
+    password = serializers.CharField(write_only=True, required=False, min_length=6)
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'full_name',
+            'contact_no',
+            'password',
+            'profile_image',
+            'status',
+        ]
+
+    def validate_contact_no(self, value):
+        """Validate contact number length"""
+        if len(value) < 10:
+            raise serializers.ValidationError("Contact number must be at least 10 digits")
+        if len(value) > 15:
+            raise serializers.ValidationError("Contact number cannot exceed 15 digits")
+        return value
+
+    def validate_status(self, value):
+        """Validate status is either 0 or 1"""
+        if value not in [0, 1]:
+            raise serializers.ValidationError("Status must be 0 (Inactive) or 1 (Active)")
+        return value
