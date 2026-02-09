@@ -72,6 +72,22 @@ class EventCollectionTransaction(BaseModel):
         help_text="e.g., Cash, Card, UPI, Bank Transfer"
     )
     
+    # Razorpay order ID (optional)
+    razorpay_order_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Razorpay order ID for this transaction"
+    )
+    
+    # Razorpay payment ID (optional)
+    razorpay_payment_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Razorpay payment ID for this transaction"
+    )
+    
     # Transaction timestamp
     transaction_date = models.DateTimeField(auto_now_add=True)
     

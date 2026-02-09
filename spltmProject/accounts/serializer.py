@@ -158,6 +158,62 @@ class RefreshTokenSerializer(serializers.Serializer):
 
 
 # =======================================
+# Reset Password Serializers
+# =======================================
+
+class ResetPasswordRequestSerializer(serializers.Serializer):
+    """
+    Serializer for reset password request.
+    Accepts: email or contact_no to identify user and generate OTP.
+    """
+    identifier = serializers.CharField(
+        required=True,
+        help_text="Email or contact number"
+    )
+
+
+class ResetPasswordVerifyOTPSerializer(serializers.Serializer):
+    """
+    Serializer for verifying reset password OTP and updating password.
+    Accepts: user_id/email, otp, and new_password.
+    """
+    user_id = serializers.IntegerField(required=False, allow_null=True)
+    email = serializers.EmailField(required=False, allow_null=True)
+    otp = serializers.CharField(
+        required=True,
+        max_length=6,
+        min_length=6
+    )
+    new_password = serializers.CharField(
+        required=True,
+        write_only=True,
+        min_length=6,
+        help_text="New password must be at least 6 characters"
+    )
+    confirm_password = serializers.CharField(
+        required=True,
+        write_only=True,
+        min_length=6,
+        help_text="Confirm password must match new password"
+    )
+
+    def validate(self, data):
+        """Validate that either user_id or email is provided"""
+        if not data.get('user_id') and not data.get('email'):
+            raise serializers.ValidationError(
+                "Either user_id or email must be provided"
+            )
+        
+        """Validate that new_password and confirm_password match"""
+        if data.get('new_password') != data.get('confirm_password'):
+            raise serializers.ValidationError(
+                "new_password and confirm_password must match"
+            )
+        
+        return data
+
+
+# =======================================
 # Profile APIs Serializers
 # =======================================
 

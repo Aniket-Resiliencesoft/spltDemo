@@ -8,10 +8,11 @@ from datetime import timedelta
 from django.contrib.auth.hashers import make_password
 from django.db.models import Q, Sum, Count, F
 from rest_framework import status
+from decimal import Decimal
 
 from common.api.base_api import BaseAuthenticatedAPI
 from events.models import Event
-from payments.models import EventCollectionTransaction
+from payments.models import EventCollectionTransaction, VendorPaymentTransaction
 from events.serializers import (
     EventGetSerializer,
     EventCreateSerializer,
@@ -99,6 +100,13 @@ class EventListAPI(BaseAuthenticatedAPI):
                 is_active=True
             ).aggregate(total=Sum('amount'))['total'] or 0.0
             
+            # Aggregate total spend on vendor payouts
+            total_spend = VendorPaymentTransaction.objects.filter(
+                event=event.id,
+                is_active=True,
+                status__in=('processing', 'completed', 'processed')
+            ).aggregate(total=Sum('amount'))['total'] or 0.0
+            
             serializer = EventListSerializer(event)
             event_data = serializer.data
             today = timezone.now().date()
@@ -113,6 +121,8 @@ class EventListAPI(BaseAuthenticatedAPI):
             event_data['total_event_amount'] = float(event.event_amount)
             event_data['participants_count'] = participants_count
             event_data['total_contributed'] = float(total_contributed)
+            event_data['total_spend'] = float(total_spend)
+            event_data['IsRechargeRequired'] = total_contributed < total_spend
             event_data['event_status'] = derived_event_status
             serialized_data.append(event_data)
         
@@ -598,7 +608,12 @@ class EventShareLinkAPI(BaseAuthenticatedAPI):
 
 class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
     """GET: For the authenticated user, return all events they created
-    with collected amount per event and the total collected across those events.
+    with collected amount, spend amount per event, and available wallet balance.
+    
+    Returns for each event:
+    - event_total_collected: Total amount collected from participants
+    - event_total_spend: Total amount paid out to vendors
+    - my_wallet: Available balance (event_total_collected - event_total_spend)
     """
 
     def get(self, request):
@@ -618,42 +633,58 @@ class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
         # Query events created by this user
         events_qs = Event.objects.filter(created_by_id=user_id, is_active=True).order_by('-created_at')
 
-        # Annotate collected amount per event (only completed and active transactions)
-        from django.db.models import Q, Sum
-
-        annotated_qs = events_qs.annotate(
-            collected_amount=Sum(
-                'transactions__amount',
-                filter=Q(transactions__status='completed', transactions__is_active=True)
-            )
-        )
-
-        # Build response list
+        # Build response list with detailed financial data
         events_list = []
-        for ev in annotated_qs:
-            collected = ev.collected_amount or 0
+        total_collected_all = Decimal('0.00')
+        total_spend_all = Decimal('0.00')
+        
+        for ev in events_qs:
+            # Calculate total collected for this event (completed transactions)
+            event_collected = EventCollectionTransaction.objects.filter(
+                event_id=ev.id,
+                status='completed',
+                is_active=True
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            
+            # Calculate total spend for this event (processed + processing vendor payouts)
+            event_spend = VendorPaymentTransaction.objects.filter(
+                event=ev.id,
+                is_active=True,
+                status__in=('processing', 'completed', 'processed')
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            
+            # Calculate available wallet for this event
+            event_wallet = Decimal(event_collected) - Decimal(event_spend)
+            if event_wallet < Decimal('0.00'):
+                event_wallet = Decimal('0.00')
+            
+            # Accumulate totals
+            total_collected_all += Decimal(event_collected)
+            total_spend_all += Decimal(event_spend)
+            
             events_list.append({
                 'event_id': ev.id,
                 'title': ev.title,
-                'event_date': ev.event_date,
-                'total_event_amount': float(ev.event_amount or 0),
-                'collected_amount': float(collected),
+                'event_date': str(ev.event_date),
+                'total_event_amount': str(ev.event_amount or Decimal('0.00')),
+                'event_total_collected': str(event_collected),
+                'event_total_spend': str(event_spend),
+                'my_wallet': str(event_wallet),
                 'status': ev.status,
             })
-
-        # Total collected across all events
-        total_collected = annotated_qs.aggregate(
-            total=Sum(
-                'transactions__amount',
-                filter=Q(transactions__status='completed', transactions__is_active=True)
-            )
-        )['total'] or 0
+        
+        # Calculate total wallet across all events
+        total_wallet = total_collected_all - total_spend_all
+        if total_wallet < Decimal('0.00'):
+            total_wallet = Decimal('0.00')
 
         return self.success_response(
             data={
                 'events': events_list,
-                'events_total_collected': float(total_collected),
-                'events_count': annotated_qs.count(),
+                'total_collected_all_events': str(total_collected_all),
+                'total_spend_all_events': str(total_spend_all),
+                'total_wallet_balance': str(total_wallet),
+                'events_count': len(events_list),
             },
             message="Creator events and collections retrieved successfully"
         )

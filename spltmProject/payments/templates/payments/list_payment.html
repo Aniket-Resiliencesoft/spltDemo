@@ -181,19 +181,26 @@
       row.className = "tx-row";
       row.innerHTML = `
       <div class="row align-items-center">
-        <div class="col-md-3">
+        <div class="col-md-2">
           <div class="tx-title">${tx.event_title || "Event"}</div>
           <div class="tx-meta">📅 ${convertUtcToIndianTime(tx.transaction_date) || ""}</div>
         </div>
-        <div class="col-md-2">👤 ${tx.user_name || "N/A"}</div>
         <div class="col-md-2">
+          <div class="tx-meta">Order ID</div>
+          <div class="tx-title"><small>${tx.razorpay_order_id || "N/A"}</small></div>
+        </div>
+        <div class="col-md-2">
+          <div class="tx-meta">Payment ID</div>
+          <div class="tx-title"><small>${tx.razorpay_payment_id || "N/A"}</small></div>
+        </div>
+        <div class="col-md-1">👤 ${tx.user_name || "N/A"}</div>
+        <div class="col-md-1">
           <span class="badge badge-type">${tx.transaction_type_display || tx.transaction_type || ""}</span>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
           <span class="badge bg-light text-dark">${tx.status_display || tx.status || ""}</span>
         </div>
-        <div class="col-md-2 fw-semibold">₹ ${tx.amount || 0}</div>
-        <div class="col-md-1 text-end text-muted">#${tx.id || ""}</div>
+        <div class="col-md-1 fw-semibold">₹ ${tx.amount || 0}</div>
       </div>
     `;
       list.appendChild(row);

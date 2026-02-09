@@ -857,10 +857,16 @@ class VendorPaymentCreateWalletAPI(BaseAuthenticatedAPI):
         req_amount = serializer.validated_data.get('amount') or Decimal('0.00')
 
         # ===== Calculate Wallet Balance (across ALL organizer's events) =====
+        # Get all event IDs created by this organizer
+        organizer_event_ids = Event.objects.filter(
+            created_by_id=requester_id,
+            is_active=True
+        ).values_list('id', flat=True)
+        
         # Total collected amount across ALL events created by this organizer
         total_wallet_collected = (
             EventCollectionTransaction.objects.filter(
-                event__created_by_id=requester_id,
+                event_id__in=organizer_event_ids,
                 is_active=True,
                 status='completed'
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -869,7 +875,7 @@ class VendorPaymentCreateWalletAPI(BaseAuthenticatedAPI):
         # Subtract ALL vendor payouts (processing + processed) for ALL organizer's events
         all_processing_payouts = (
             VendorPaymentTransaction.objects.filter(
-                event__created_by_id=requester_id,
+                event__in=organizer_event_ids,
                 is_active=True,
                 status__in=("processing",)
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -877,7 +883,7 @@ class VendorPaymentCreateWalletAPI(BaseAuthenticatedAPI):
         
         all_processed_payouts = (
             VendorPaymentTransaction.objects.filter(
-                event__created_by_id=requester_id,
+                event__in=organizer_event_ids,
                 is_active=True,
                 status__in=("processed",)
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -1072,10 +1078,16 @@ class OrganizerWalletBalanceAPI(BaseAuthenticatedAPI):
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # Get all event IDs created by this organizer
+        organizer_event_ids = Event.objects.filter(
+            created_by_id=request_user_id,
+            is_active=True
+        ).values_list('id', flat=True)
+
         # Total collected across all organizer's events
         total_collected = (
             EventCollectionTransaction.objects.filter(
-                event__created_by_id=request_user_id,
+                event_id__in=organizer_event_ids,
                 is_active=True,
                 status='completed'
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -1084,7 +1096,7 @@ class OrganizerWalletBalanceAPI(BaseAuthenticatedAPI):
         # All payouts being processed
         processing_payouts = (
             VendorPaymentTransaction.objects.filter(
-                event__created_by_id=request_user_id,
+                event__in=organizer_event_ids,
                 is_active=True,
                 status__in=("processing",)
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -1093,7 +1105,7 @@ class OrganizerWalletBalanceAPI(BaseAuthenticatedAPI):
         # All payouts processed
         processed_payouts = (
             VendorPaymentTransaction.objects.filter(
-                event__created_by_id=request_user_id,
+                event__in=organizer_event_ids,
                 is_active=True,
                 status__in=("processed",)
             ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
@@ -1112,7 +1124,7 @@ class OrganizerWalletBalanceAPI(BaseAuthenticatedAPI):
         events_breakdown = (
             EventCollectionTransaction.objects
             .filter(
-                event__created_by_id=request_user_id,
+                event_id__in=organizer_event_ids,
                 is_active=True,
                 status='completed'
             )
