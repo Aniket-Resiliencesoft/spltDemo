@@ -58,7 +58,7 @@ def generate_event_share_url(
         'per_person_amount': per_person_amount,
         'share_link': full_url or relative_url,
         'event_title': event.title,
-        'event_category': event.get_category_display(),
+        'event_category': event.category,
         'total_amount': event.event_amount,
         'persons_count': event.persons_count,
     }

@@ -20,7 +20,7 @@ from common.utils.email_service import send_otp_email
 from common.responses import api_response_success, api_response_error
 from common.utils.jwt_utils import generate_jwt_token
 
-
+from common.api.base_api import BaseAuthenticatedAPI
 # ==========================================================
 # AUTH RESPONSE HELPER (AUTH MODULE ONLY – NO response.py)
 # ==========================================================
@@ -406,3 +406,23 @@ class OTPVerifyAPI(APIView):
             "OTP verified successfully",
             token_data
         )
+
+class GetSecrectKey(BaseAuthenticatedAPI):
+    """
+    Get:
+    """
+    def get(self, request):
+        auth_error = self.require_authentication(request)
+        if auth_error:
+            return auth_error
+
+        data = {
+            'RAZORPAY_KEY_ID': getattr(settings, 'RAZORPAY_KEY_ID', None),
+        }
+
+        return self.success_response(
+            data=data,
+            message='Razorpay configuration retrieved successfully',
+            status_code=status.HTTP_200_OK
+        )
+        

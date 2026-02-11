@@ -1,5 +1,5 @@
 from django.urls import path
-from accounts.api_views.auth_api import LoginAPI, OTPGenerateAPI, OTPVerifyAPI, RefreshTokenAPI
+from accounts.api_views.auth_api import GetSecrectKey, LoginAPI, OTPGenerateAPI, OTPVerifyAPI, RefreshTokenAPI
 from accounts.api_views.reset_password_api import ResetPasswordRequestAPI, ResetPasswordVerifyOTPAPI
 from accounts.api_views.dashboard_api import DashboardStatsAPI, UserDashboardAPI
 
@@ -46,6 +46,7 @@ urlpatterns += [
     path('api/auth/otp/verify/', OTPVerifyAPI.as_view()),
     path('api/auth/reset-password/request/', ResetPasswordRequestAPI.as_view()),
     path('api/auth/reset-password/verify-otp/', ResetPasswordVerifyOTPAPI.as_view()),
+    path('api/GetSecrectKey',GetSecrectKey.as_view()),
 ]
 
 urlpatterns += [
