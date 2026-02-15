@@ -5,12 +5,18 @@ Serializers for Event model
 from rest_framework import serializers
 from events.models import Event
 from decimal import Decimal, ROUND_HALF_UP
+from events.utils import compute_split
 
 class EventGetSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
 
     per_person_amount = serializers.SerializerMethodField()
+    collected_amount = serializers.SerializerMethodField()
+    base_per_person = serializers.SerializerMethodField()
+    admin_charge_per_person = serializers.SerializerMethodField()
+    total_admin_amount = serializers.SerializerMethodField()
+    total_collected = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -28,7 +34,12 @@ class EventGetSerializer(serializers.ModelSerializer):
             'longitude',
             'persons_count',
             'event_amount',
+            'collected_amount',
             'per_person_amount',
+            'base_per_person',
+            'admin_charge_per_person',
+            'total_admin_amount',
+            'total_collected',
             'status',
             'status_display',
             'created_by',
@@ -42,10 +53,53 @@ class EventGetSerializer(serializers.ModelSerializer):
         ]
 
     def get_per_person_amount(self, obj):
-        if not obj.persons_count or not obj.event_amount:
+        try:
+            split = compute_split(obj.event_amount, obj.persons_count)
+            # Return final per-head (includes admin charge) as string with 2 decimals
+            return str(split['final_per_head'])
+        except Exception:
             return "0.00"
 
-        return round(obj.event_amount / obj.persons_count, 2)
+    def get_collected_amount(self, obj):
+        try:
+            from django.db.models import Sum
+            from payments.models import EventCollectionTransaction
+            total = EventCollectionTransaction.objects.filter(
+                event_id=obj.id,
+                status='completed',
+                is_active=True
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            return str(total)
+        except Exception:
+            return "0.00"
+
+    def get_base_per_person(self, obj):
+        try:
+            split = compute_split(obj.event_amount, obj.persons_count)
+            return str(split['per_head'])
+        except Exception:
+            return "0.00"
+
+    def get_admin_charge_per_person(self, obj):
+        try:
+            split = compute_split(obj.event_amount, obj.persons_count)
+            return str(split['admin_charge_per_head'])
+        except Exception:
+            return "0.00"
+
+    def get_total_admin_amount(self, obj):
+        try:
+            split = compute_split(obj.event_amount, obj.persons_count)
+            return str(split['total_admin_amount'])
+        except Exception:
+            return "0.00"
+
+    def get_total_collected(self, obj):
+        try:
+            split = compute_split(obj.event_amount, obj.persons_count)
+            return str(split['total_collected'])
+        except Exception:
+            return "0.00"
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
@@ -217,6 +271,11 @@ class EventSummarySerializer(serializers.Serializer):
     due_date = serializers.DateTimeField()
     collected_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    base_per_person = serializers.DecimalField(max_digits=12, decimal_places=2)
+    admin_charge_per_person = serializers.DecimalField(max_digits=12, decimal_places=2)
+    final_per_person = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_admin_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_collected = serializers.DecimalField(max_digits=12, decimal_places=2)
     created_by = serializers.DictField(allow_null=True)
     event_date = serializers.DateField()
     start_date_time = serializers.DateTimeField()

@@ -9,6 +9,7 @@ from accounts.models import Role, User, UserRole
 from events.models import Event
 from payments.models import EventCollectionTransaction
 from django.db.models import Sum, Max
+from events.utils import compute_split
 from accounts.serializer import (
     UserGetSerializer,
     UserCreateSerializer,
@@ -109,11 +110,30 @@ class UserDetailAPI(APIView):
         # Include created events (organiser)
         for ev in created_events:
             agg = payment_aggregates(ev, user)
+            # attach split info
+            try:
+                sp = compute_split(ev.event_amount, ev.persons_count)
+                split_info = {
+                    'base_per_person': str(sp['per_head']),
+                    'admin_charge_per_person': str(sp['admin_charge_per_head']),
+                    'final_per_person': str(sp['final_per_head']),
+                    'total_admin_amount': str(sp['total_admin_amount']),
+                    'total_collected': str(sp['total_collected']),
+                }
+            except Exception:
+                split_info = {
+                    'base_per_person': '0.00',
+                    'admin_charge_per_person': '0.00',
+                    'final_per_person': '0.00',
+                    'total_admin_amount': '0.00',
+                    'total_collected': '0.00',
+                }
             events.append({
                 'event_id': ev.id,
                 'title': ev.title,
                 'role': 'organiser',
                 'payment': agg,
+                'split': split_info,
             })
 
         # Include joined events where user is participant (avoid duplicates)
@@ -123,11 +143,29 @@ class UserDetailAPI(APIView):
                 # user is organiser and participant; mark organiser already added
                 continue
             agg = payment_aggregates(ev, user)
+            try:
+                sp = compute_split(ev.event_amount, ev.persons_count)
+                split_info = {
+                    'base_per_person': str(sp['per_head']),
+                    'admin_charge_per_person': str(sp['admin_charge_per_head']),
+                    'final_per_person': str(sp['final_per_head']),
+                    'total_admin_amount': str(sp['total_admin_amount']),
+                    'total_collected': str(sp['total_collected']),
+                }
+            except Exception:
+                split_info = {
+                    'base_per_person': '0.00',
+                    'admin_charge_per_person': '0.00',
+                    'final_per_person': '0.00',
+                    'total_admin_amount': '0.00',
+                    'total_collected': '0.00',
+                }
             events.append({
                 'event_id': ev.id,
                 'title': ev.title,
                 'role': 'participant',
                 'payment': agg,
+                'split': split_info,
             })
 
         data = serializer.data

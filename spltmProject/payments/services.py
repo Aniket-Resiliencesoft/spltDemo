@@ -28,6 +28,7 @@ from payments.models import (
 )
 from accounts.models import User
 from events.models import Event
+from events.utils import compute_split
 
 logger = logging.getLogger(__name__)
 
@@ -220,27 +221,88 @@ class RazorpayPaymentService:
             
             # Get event creator (vendor)
             vendor = razorpay_order.event.created_by
-            
-            # Credit vendor wallet
+
+            # Compute split based on event config (uses Decimal-safe logic)
+            try:
+                split = compute_split(razorpay_order.event.event_amount, razorpay_order.event.persons_count)
+                per_head = split['per_head']
+                admin_charge_per_head = split['admin_charge_per_head']
+                final_per_head = split['final_per_head']
+            except Exception:
+                # Fallback: treat entire amount as vendor amount
+                per_head = amount
+                admin_charge_per_head = Decimal('0.00')
+                final_per_head = amount
+
+            # If captured amount doesn't match expected final_per_head, log a warning
+            if amount != final_per_head:
+                logger.warning(
+                    f"Captured amount {amount} differs from expected final_per_head {final_per_head} for order {order_id}"
+                )
+
+            # Credit vendor wallet with base per_head
             self._credit_wallet(
                 user=vendor,
-                amount=amount,
+                amount=per_head,
                 reason='PAYMENT_RECEIVED',
                 event_id=razorpay_order.event.id,
                 razorpay_order_id=order_id,
                 razorpay_payment_id=payment_id,
-                description=f"Payment from {razorpay_order.participant.full_name} for {razorpay_order.event.title}"
+                description=f"Payment (base) from {razorpay_order.participant.full_name} for {razorpay_order.event.title}"
             )
-            
+
+            # Credit admin commission to configured platform admin user if available
+            admin_user = None
+            admin_user_id = getattr(settings, 'PLATFORM_ADMIN_USER_ID', None)
+            admin_user_email = getattr(settings, 'PLATFORM_ADMIN_EMAIL', None)
+
+            try:
+                if admin_user_id:
+                    admin_user = User.objects.filter(id=admin_user_id, is_active=True).first()
+                elif admin_user_email:
+                    admin_user = User.objects.filter(email=admin_user_email, is_active=True).first()
+            except Exception:
+                admin_user = None
+
+            if admin_charge_per_head > Decimal('0.00'):
+                if admin_user:
+                    # Credit admin user wallet
+                    self._credit_wallet(
+                        user=admin_user,
+                        amount=admin_charge_per_head,
+                        reason='ADMIN_COMMISSION',
+                        event_id=razorpay_order.event.id,
+                        razorpay_order_id=order_id,
+                        razorpay_payment_id=payment_id,
+                        description=f"Admin commission from {razorpay_order.participant.full_name} for {razorpay_order.event.title}"
+                    )
+                else:
+                    # Fallback: if no admin user configured, credit the vendor with the admin portion
+                    # (keeps money accounted for until admin account is configured)
+                    self._credit_wallet(
+                        user=vendor,
+                        amount=admin_charge_per_head,
+                        reason='ADMIN_COMMISSION_FALLBACK',
+                        event_id=razorpay_order.event.id,
+                        razorpay_order_id=order_id,
+                        razorpay_payment_id=payment_id,
+                        description=f"Admin commission fallback credited to vendor for {razorpay_order.event.title}"
+                    )
+
             logger.info(f"Payment captured: {payment_id}, credited vendor {vendor.id}")
-            
+
             return {
                 "IsSuccess": True,
                 "Message": "Payment processed successfully",
                 "Data": {
                     "order_id": order_id,
                     "payment_id": payment_id,
-                    "amount": float(amount)
+                    "amount": float(amount),
+                    "split": {
+                        "per_head": str(per_head),
+                        "admin_charge_per_head": str(admin_charge_per_head),
+                        "final_per_head": str(final_per_head)
+                    }
                 }
             }
         

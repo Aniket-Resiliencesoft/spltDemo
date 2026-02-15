@@ -150,7 +150,18 @@ class ProfileUpdateAPI(APIView):
                 user.status = data['status']
             
             if 'password' in data:
-                user.password_hash = make_password(data['password'])
+                new_password = data['password']
+
+                # Check if new password is same as old password
+                if check_password(new_password, user.password_hash):
+                    return api_response_error(
+                        message="New password cannot be the same as old password",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # If different → hash and update
+                user.password_hash = make_password(new_password)
+
             
             # Handle profile image update
             if 'profile_image' in request.FILES:

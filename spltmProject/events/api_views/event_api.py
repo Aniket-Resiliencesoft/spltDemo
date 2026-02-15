@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import make_password
 from django.db.models import Q, Sum, Count, F
 from rest_framework import status
 from decimal import Decimal
+from events.utils import compute_split
 
 from common.api.base_api import BaseAuthenticatedAPI
 from events.models import Event
@@ -109,6 +110,20 @@ class EventListAPI(BaseAuthenticatedAPI):
             
             serializer = EventListSerializer(event)
             event_data = serializer.data
+            # split details
+            try:
+                split = compute_split(event.event_amount, event.persons_count)
+                event_data['base_per_person'] = float(split['per_head'])
+                event_data['admin_charge_per_person'] = float(split['admin_charge_per_head'])
+                event_data['final_per_person'] = float(split['final_per_head'])
+                event_data['total_admin_amount'] = float(split['total_admin_amount'])
+                event_data['total_collected'] = float(split['total_collected'])
+            except Exception:
+                event_data['base_per_person'] = 0.0
+                event_data['admin_charge_per_person'] = 0.0
+                event_data['final_per_person'] = 0.0
+                event_data['total_admin_amount'] = 0.0
+                event_data['total_collected'] = 0.0
             today = timezone.now().date()
             end_plus_one = (event.end_date_time + timedelta(days=1)).date()
 
@@ -226,6 +241,20 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
             
             serializer = EventListSerializer(event)
             event_data = serializer.data
+            # split details for joined list
+            try:
+                split = compute_split(event.event_amount, event.persons_count)
+                event_data['base_per_person'] = float(split['per_head'])
+                event_data['admin_charge_per_person'] = float(split['admin_charge_per_head'])
+                event_data['final_per_person'] = float(split['final_per_head'])
+                event_data['total_admin_amount'] = float(split['total_admin_amount'])
+                event_data['total_collected'] = float(split['total_collected'])
+            except Exception:
+                event_data['base_per_person'] = 0.0
+                event_data['admin_charge_per_person'] = 0.0
+                event_data['final_per_person'] = 0.0
+                event_data['total_admin_amount'] = 0.0
+                event_data['total_collected'] = 0.0
             today = timezone.now().date()
             end_plus_one = (event.end_date_time + timedelta(days=1)).date()
 
@@ -598,6 +627,8 @@ class EventShareLinkAPI(BaseAuthenticatedAPI):
                 'share_link': share_data['share_link'],
                 'relative_link': share_data['relative_url'],
                 'per_person_amount': float(share_data['per_person_amount']),
+                'base_per_person': float(share_data.get('base_per_person') or 0.0),
+                'admin_charge_per_person': float(share_data.get('admin_charge_per_head') or 0.0),
                 'total_amount': float(share_data['total_amount']),
                 'persons_count': share_data['persons_count'],
                 'event_category': share_data['event_category'],
@@ -662,11 +693,28 @@ class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
             total_collected_all += Decimal(event_collected)
             total_spend_all += Decimal(event_spend)
             
+            # compute split once
+            try:
+                _sp = compute_split(ev.event_amount, ev.persons_count)
+            except Exception:
+                _sp = {
+                    'per_head': Decimal('0.00'),
+                    'admin_charge_per_head': Decimal('0.00'),
+                    'final_per_head': Decimal('0.00'),
+                    'total_admin_amount': Decimal('0.00'),
+                    'total_collected': Decimal('0.00'),
+                }
+
             events_list.append({
                 'event_id': ev.id,
                 'title': ev.title,
                 'event_date': str(ev.event_date),
                 'total_event_amount': str(ev.event_amount or Decimal('0.00')),
+                'base_per_person': str(_sp.get('per_head')),
+                'admin_charge_per_person': str(_sp.get('admin_charge_per_head')),
+                'final_per_person': str(_sp.get('final_per_head')),
+                'total_admin_amount': str(_sp.get('total_admin_amount')),
+                'total_collected': str(_sp.get('total_collected')),
                 'event_total_collected': str(event_collected),
                 'event_total_spend': str(event_spend),
                 'my_wallet': str(event_wallet),

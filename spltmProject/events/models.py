@@ -4,6 +4,7 @@ from common.models import BaseModel
 from accounts.models import User
 from decimal import Decimal
 from django.db.models import Sum, Case, When, Value, CharField
+from events.utils import compute_split
 
 
 class Event(BaseModel):
@@ -186,7 +187,7 @@ class Event(BaseModel):
                     'updated_at': p.updated_at,
                 })
 
-        return {
+        summary = {
             'members': members,
             'due_date': self.due_pay_date_time,
             'collected_amount': collected,
@@ -198,3 +199,25 @@ class Event(BaseModel):
             'vendor_payouts_summary': payouts_summary,
             'vendor_payouts': payouts_list,
         }
+
+        # Compute and attach split details (map helper keys to serializer-friendly names)
+        try:
+            sp = compute_split(self.event_amount, self.persons_count)
+            summary.update({
+                'base_per_person': sp.get('per_head'),
+                'admin_charge_per_person': sp.get('admin_charge_per_head'),
+                'final_per_person': sp.get('final_per_head'),
+                'total_admin_amount': sp.get('total_admin_amount'),
+                'total_collected': sp.get('total_collected'),
+            })
+        except Exception:
+            # keep defaults if split computation fails
+            summary.update({
+                'base_per_person': Decimal('0.00'),
+                'admin_charge_per_person': Decimal('0.00'),
+                'final_per_person': Decimal('0.00'),
+                'total_admin_amount': Decimal('0.00'),
+                'total_collected': Decimal('0.00'),
+            })
+
+        return summary
