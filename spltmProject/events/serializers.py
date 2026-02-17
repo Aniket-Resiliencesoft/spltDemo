@@ -15,7 +15,9 @@ class EventGetSerializer(serializers.ModelSerializer):
     collected_amount = serializers.SerializerMethodField()
     base_per_person = serializers.SerializerMethodField()
     admin_charge_per_person = serializers.SerializerMethodField()
+    admin_percentage = serializers.SerializerMethodField()
     total_admin_amount = serializers.SerializerMethodField()
+    total_collected_without_admin = serializers.SerializerMethodField()
     total_collected = serializers.SerializerMethodField()
 
     class Meta:
@@ -38,7 +40,9 @@ class EventGetSerializer(serializers.ModelSerializer):
             'per_person_amount',
             'base_per_person',
             'admin_charge_per_person',
+            'admin_percentage',
             'total_admin_amount',
+            'total_collected_without_admin',
             'total_collected',
             'status',
             'status_display',
@@ -87,10 +91,35 @@ class EventGetSerializer(serializers.ModelSerializer):
         except Exception:
             return "0.00"
 
+    def get_admin_percentage(self, obj):
+        try:
+            # compute_split default admin percentage is 5.5
+            from decimal import Decimal
+            return str(Decimal('5.5'))
+        except Exception:
+            return "5.5%"
+
     def get_total_admin_amount(self, obj):
         try:
             split = compute_split(obj.event_amount, obj.persons_count)
             return str(split['total_admin_amount'])
+        except Exception:
+            return "0.00"
+
+    def get_total_collected_without_admin(self, obj):
+        try:
+            # Count actual joined participants (distinct users with any active transaction)
+            from payments.models import EventCollectionTransaction
+            participants_count = EventCollectionTransaction.objects.filter(
+                event_id=obj.id,
+                is_active=True
+            ).values('user').distinct().count()
+
+            split = compute_split(obj.event_amount, obj.persons_count)
+            per_head = split['per_head']
+            total = (per_head * participants_count)
+            # ensure two decimal places
+            return str(Decimal(total).quantize(Decimal('0.01')))
         except Exception:
             return "0.00"
 
@@ -276,6 +305,7 @@ class EventSummarySerializer(serializers.Serializer):
     final_per_person = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_admin_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_collected = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_collected_without_admin = serializers.DecimalField(max_digits=12, decimal_places=2)
     created_by = serializers.DictField(allow_null=True)
     event_date = serializers.DateField()
     start_date_time = serializers.DateTimeField()

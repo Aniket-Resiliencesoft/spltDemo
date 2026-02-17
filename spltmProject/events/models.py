@@ -203,12 +203,26 @@ class Event(BaseModel):
         # Compute and attach split details (map helper keys to serializer-friendly names)
         try:
             sp = compute_split(self.event_amount, self.persons_count)
+            # determine actual joined participants (distinct users with any active transaction)
+            participants_count = Decimal('0')
+            try:
+                if EventCollectionTransaction:
+                    participants_count = EventCollectionTransaction.objects.filter(
+                        event=self,
+                        is_active=True
+                    ).values('user').distinct().count()
+            except Exception:
+                participants_count = Decimal(self.persons_count)
+
+            total_without_admin = (sp.get('per_head') * Decimal(participants_count)).quantize(Decimal('0.01'))
+
             summary.update({
                 'base_per_person': sp.get('per_head'),
                 'admin_charge_per_person': sp.get('admin_charge_per_head'),
                 'final_per_person': sp.get('final_per_head'),
                 'total_admin_amount': sp.get('total_admin_amount'),
                 'total_collected': sp.get('total_collected'),
+                'total_collected_without_admin': total_without_admin
             })
         except Exception:
             # keep defaults if split computation fails
@@ -218,6 +232,7 @@ class Event(BaseModel):
                 'final_per_person': Decimal('0.00'),
                 'total_admin_amount': Decimal('0.00'),
                 'total_collected': Decimal('0.00'),
+                'total_collected_without_admin': Decimal('0.00'),
             })
 
         return summary

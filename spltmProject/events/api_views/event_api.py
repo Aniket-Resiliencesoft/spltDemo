@@ -118,6 +118,15 @@ class EventListAPI(BaseAuthenticatedAPI):
                 event_data['final_per_person'] = float(split['final_per_head'])
                 event_data['total_admin_amount'] = float(split['total_admin_amount'])
                 event_data['total_collected'] = float(split['total_collected'])
+                # Total contribution excluding admin charge (per_head * actual joined participants)
+                try:
+                    participants_count = EventCollectionTransaction.objects.filter(
+                        event_id=event.id,
+                        is_active=True
+                    ).values('user_id').distinct().count()
+                    event_data['total_collected_without_admin'] = float(Decimal(str(split['per_head'])) * Decimal(participants_count))
+                except Exception:
+                    event_data['total_collected_without_admin'] = float(0.0)
             except Exception:
                 event_data['base_per_person'] = 0.0
                 event_data['admin_charge_per_person'] = 0.0
@@ -249,6 +258,14 @@ class EventJoinedListAPI(BaseAuthenticatedAPI):
                 event_data['final_per_person'] = float(split['final_per_head'])
                 event_data['total_admin_amount'] = float(split['total_admin_amount'])
                 event_data['total_collected'] = float(split['total_collected'])
+                try:
+                    participants_count = EventCollectionTransaction.objects.filter(
+                        event_id=event.id,
+                        is_active=True
+                    ).values('user_id').distinct().count()
+                    event_data['total_collected_without_admin'] = float(Decimal(str(split['per_head'])) * Decimal(participants_count))
+                except Exception:
+                    event_data['total_collected_without_admin'] = float(0.0)
             except Exception:
                 event_data['base_per_person'] = 0.0
                 event_data['admin_charge_per_person'] = 0.0
