@@ -111,21 +111,11 @@ class ProfileGetByIdAPI(APIView):
 
 
 class ProfileUpdateAPI(APIView):
-    """
-    PUT:
-    Updates user profile information including image.
-    Accepts:
-        - full_name: str (optional)
-        - contact_no: str (optional)
-        - profile_image: file (optional)
-        - status: int (optional, 0=Inactive, 1=Active)
-    Path Parameter:
-        - user_id: int
-    Returns:
-        - Updated user object
-    """
 
     def put(self, request, user_id):
+
+        print("Received profile update request for user_id:", user_id)
+
         try:
             user = User.objects.get(id=user_id, is_active=True)
         except User.DoesNotExist:
@@ -134,52 +124,70 @@ class ProfileUpdateAPI(APIView):
                 status_code=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = ProfileUpdateSerializer(data=request.data, partial=True)
-        
+        # IMPORTANT: pass instance
+        serializer = ProfileUpdateSerializer(
+            user,
+            data=request.data,
+            partial=True
+        )
+
         if serializer.is_valid():
+
             data = serializer.validated_data
 
-            # Update user fields
+            # Update fields
             if 'full_name' in data:
                 user.full_name = data['full_name']
-            
+
+            if 'email' in data:
+                user.email = data['email']
+
             if 'contact_no' in data:
                 user.contact_no = data['contact_no']
-            
+
             if 'status' in data:
                 user.status = data['status']
-            
-            if 'password' in data:
-                new_password = data['password']
 
-                # Check if new password is same as old password
+            # Password update logic
+            if 'password' in data:
+
+                new_password = data['password']
+                old_password = request.data.get('old_password')
+
+                if not old_password:
+                    return api_response_error(
+                        message="Old password is required to change password",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if not check_password(old_password, user.password_hash):
+                    return api_response_error(
+                        message="Old password is incorrect",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
                 if check_password(new_password, user.password_hash):
                     return api_response_error(
                         message="New password cannot be the same as old password",
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
 
-                # If different → hash and update
                 user.password_hash = make_password(new_password)
 
-            
-            # Handle profile image update
+            # Profile image update
             if 'profile_image' in request.FILES:
-                # Delete old image if exists
                 if user.profile_image:
                     user.profile_image.delete()
                 user.profile_image = request.FILES['profile_image']
-            
+
             user.save()
 
-            # Return updated user data
             updated_serializer = UserGetSerializer(user)
             response_data = updated_serializer.data
-            
-            if user.profile_image:
-                response_data['profile_image_url'] = user.profile_image.url
-            else:
-                response_data['profile_image_url'] = None
+
+            response_data['profile_image_url'] = (
+                user.profile_image.url if user.profile_image else None
+            )
 
             return api_response_success(
                 data=response_data,

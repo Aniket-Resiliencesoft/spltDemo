@@ -10,6 +10,7 @@ from decimal import Decimal
 from common.api.base_api import BaseAuthenticatedAPI
 from accounts.models import User
 from events.models import Event
+from events.utils import compute_split
 from payments.models import EventCollectionTransaction
 from payments.models import EventCollectionTransaction, RazorpayOrder, RazorpayPayout, VendorPaymentTransaction
 
@@ -106,11 +107,26 @@ class UserDashboardAPI(BaseAuthenticatedAPI):
                 is_active=True
             ).values('event_id').distinct().count()
             
-            # Get total wallet balance (sum of all contributions)
-            total_wallet_balance = EventCollectionTransaction.objects.filter(
-                user_id=user_id,
-                is_active=True
-            ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            # Compute total_wallet_balance as the sum of total_collected_without_admin
+            # across all events created by this user (i.e., per_head * participants_count per event).
+            total_wallet_balance = Decimal('0')
+            try:
+                events_qs = Event.objects.filter(created_by_id=user_id, is_active=True).values('id', 'event_amount', 'persons_count')
+                for ev in events_qs:
+                    try:
+                        _sp = compute_split(ev.get('event_amount'), ev.get('persons_count'))
+                        per_head = Decimal(str(_sp.get('per_head') or Decimal('0')))
+                    except Exception:
+                        per_head = Decimal('0')
+
+                    participants_count = EventCollectionTransaction.objects.filter(
+                        event_id=ev.get('id'),
+                        is_active=True
+                    ).values('user_id').distinct().count()
+
+                    total_wallet_balance += (per_head * Decimal(participants_count))
+            except Exception:
+                total_wallet_balance = Decimal('0')
             
             dashboard_data = {
                 'total_created_events': total_created_events,

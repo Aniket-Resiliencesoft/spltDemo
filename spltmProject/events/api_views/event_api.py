@@ -78,6 +78,25 @@ class EventListAPI(BaseAuthenticatedAPI):
         
         # Get total count before pagination
         total_count = query.count()
+        # Compute sum of total_collected_without_admin for all matching events (not just current page)
+        total_collected_without_admin_sum = Decimal('0.00')
+        try:
+            # iterate lightweight values to avoid full model load
+            for ev_summary in query.values('id', 'event_amount', 'persons_count'):
+                try:
+                    _sp = compute_split(ev_summary['event_amount'], ev_summary['persons_count'])
+                    per_head = Decimal(str(_sp.get('per_head') or Decimal('0.00')))
+                except Exception:
+                    per_head = Decimal('0.00')
+
+                participants_count = EventCollectionTransaction.objects.filter(
+                    event_id=ev_summary['id'],
+                    is_active=True
+                ).values('user_id').distinct().count()
+
+                total_collected_without_admin_sum += (per_head * Decimal(participants_count))
+        except Exception:
+            total_collected_without_admin_sum = Decimal('0.00')
         
         # Calculate offset
         offset = (page_no - 1) * page_size
@@ -633,7 +652,7 @@ class EventShareLinkAPI(BaseAuthenticatedAPI):
         # Generate share URL
         share_data = generate_event_share_url(
             event=event,
-            deeplink_base_url="https://split-money.onelink.me/ON1X/q8x2bf1i"
+            deeplink_base_url="https://split-money.onelink.me/qwRR/romlfdlj"
         )
         
         # Return success response
@@ -706,8 +725,30 @@ class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
             if event_wallet < Decimal('0.00'):
                 event_wallet = Decimal('0.00')
             
-            # Accumulate totals
-            total_collected_all += Decimal(event_collected)
+            # compute split once
+            try:
+                _sp = compute_split(ev.event_amount, ev.persons_count)
+            except Exception:
+                _sp = {
+                    'per_head': Decimal('0.00'),
+                    'admin_charge_per_head': Decimal('0.00'),
+                    'final_per_head': Decimal('0.00'),
+                    'total_admin_amount': Decimal('0.00'),
+                    'total_collected': Decimal('0.00'),
+                }
+
+            # Count actual joined participants (distinct users with any active transaction)
+            participants_count = EventCollectionTransaction.objects.filter(
+                event_id=ev.id,
+                is_active=True
+            ).values('user').distinct().count()
+
+            # Calculate total collected without admin charges for this event
+            per_head = _sp.get('per_head') or Decimal('0.00')
+            event_collected_without_admin = (Decimal(per_head) * Decimal(participants_count)).quantize(Decimal('0.01'))
+
+            # Accumulate totals (use without-admin value as requested)
+            total_collected_all += Decimal(event_collected_without_admin)
             total_spend_all += Decimal(event_spend)
             
             # compute split once
@@ -733,6 +774,7 @@ class CreatorEventCollectionsAPI(BaseAuthenticatedAPI):
                 'total_admin_amount': str(_sp.get('total_admin_amount')),
                 'total_collected': str(_sp.get('total_collected')),
                 'event_total_collected': str(event_collected),
+                'event_total_collected_without_admin': str(event_collected_without_admin),
                 'event_total_spend': str(event_spend),
                 'my_wallet': str(event_wallet),
                 'status': ev.status,

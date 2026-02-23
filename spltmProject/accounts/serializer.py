@@ -264,6 +264,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'password',
             'profile_image',
             'status',
+            'email'
         ]
 
     def validate_contact_no(self, value):
@@ -278,4 +279,13 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         """Validate status is either 0 or 1"""
         if value not in [0, 1]:
             raise serializers.ValidationError("Status must be 0 (Inactive) or 1 (Active)")
+        return value
+    
+    def validate_email(self, value):
+        """
+        Prevent duplicate email update
+        """
+        user = self.instance
+        if User.objects.filter(email=value).exclude(id=user.id).exists():
+            raise serializers.ValidationError("Email already exists")
         return value

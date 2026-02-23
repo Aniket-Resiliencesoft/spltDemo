@@ -172,17 +172,17 @@ def send_otp_email(email, otp, user_name=None):
         result = send_otp_email("user@example.com", "123456", "John Doe")
     """
     
-    subject = "Your SplitMoney OTP Code"
+    subject = "Your EvenPay OTP Code"
     
     # Create HTML body
     html_body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #333;">Welcome to SplitMoney</h2>
+                <h2 style="color: #333;">Welcome to EvenPay</h2>
                 {f'<p>Hi {user_name},</p>' if user_name else '<p>Hello,</p>'}
                 
-                <p style="color: #666;">Your OTP (One-Time Password) for SplitMoney login is:</p>
+                <p style="color: #666;">Your OTP (One-Time Password) for EvenPay login is:</p>
                 
                 <div style="background-color: #007bff; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
                     <h1 style="letter-spacing: 5px; margin: 0;">{otp}</h1>
