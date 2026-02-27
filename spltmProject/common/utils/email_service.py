@@ -1,39 +1,39 @@
 """
 Email Service Module
 
-This module provides a common function to send emails to participants
-with support for HTML templates and plain text content.
+Working production-safe SMTP version
+Supports SSL (465) and TLS (587)
 """
 
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from django.conf import settings
 import logging
-import os
 from dotenv import load_dotenv
 from pathlib import Path
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv(BASE_DIR / ".env")
 
+# -------------------------------------------------------
 # Email Configuration
+# -------------------------------------------------------
 EMAIL_CONFIG = {
-    "SmtpServer": "splitmoney.phpdev.co.in",
-    "SmtpPort": 587,
-    "Username": "noreply@splitmoney.phpdev.co.in",
-    "Password": "15Vpz.TQR[y2", 
-    "DefaultFrom": "noreply@splitmoney.phpdev.co.in",
+    "SmtpServer": "mail.evenpay.in",
+    "SmtpPort": 465,  # 465 = SSL | 587 = TLS
+    "Username": "noreply@evenpay.in",
+    "Password": "MaCNCut~bVlnG+k6",
+    "DefaultFrom": "noreply@evenpay.in",
 }
 
 
-
+# -------------------------------------------------------
+# COMMON EMAIL FUNCTION
+# -------------------------------------------------------
 def send_email(recipient_email, subject, body, is_html=False):
-    """
-    Send an email to a participant using Gmail SMTP.
-    """
 
     def mask_password(pwd):
         if not pwd:
@@ -42,6 +42,8 @@ def send_email(recipient_email, subject, body, is_html=False):
         if len(pwd) <= 4:
             return "*" * len(pwd)
         return "*" * (len(pwd) - 4) + pwd[-4:]
+
+    server = None
 
     try:
         # Validate email
@@ -52,49 +54,61 @@ def send_email(recipient_email, subject, body, is_html=False):
                 "email_message": "Invalid email address provided"
             }
 
-        # Debug (console)
+        # Debug info
         print("SMTP DEBUG INFO")
-        print(f"Server   : {EMAIL_CONFIG.get('SmtpServer')}")
-        print(f"Port     : {EMAIL_CONFIG.get('SmtpPort')}")
-        print(f"Username : {EMAIL_CONFIG.get('Username')}")
-        print(f"Password : {mask_password(EMAIL_CONFIG.get('Password'))}")
+        print(f"Server   : {EMAIL_CONFIG['SmtpServer']}")
+        print(f"Port     : {EMAIL_CONFIG['SmtpPort']}")
+        print(f"Username : {EMAIL_CONFIG['Username']}")
+        print(f"Password : {mask_password(EMAIL_CONFIG['Password'])}")
 
-        # Create email message
+        # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
-        msg['From'] = EMAIL_CONFIG.get('DefaultFrom')
+        msg['From'] = EMAIL_CONFIG['DefaultFrom']
         msg['To'] = recipient_email
 
-        # Attach body
         if is_html:
             msg.attach(MIMEText("Please view this email in HTML format.", 'plain'))
             msg.attach(MIMEText(body, 'html'))
         else:
             msg.attach(MIMEText(body, 'plain'))
 
-        # Connect to SMTP
-        server = smtplib.SMTP(
-            EMAIL_CONFIG.get('SmtpServer'),
-            EMAIL_CONFIG.get('SmtpPort')
-        )
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
+        # -------------------------------------------------------
+        # SMTP CONNECTION (AUTO SSL/TLS)
+        # -------------------------------------------------------
+        port = EMAIL_CONFIG["SmtpPort"]
+
+        if port == 465:
+            # SSL
+            server = smtplib.SMTP_SSL(
+                EMAIL_CONFIG["SmtpServer"],
+                port,
+                timeout=30
+            )
+            server.ehlo()
+        else:
+            # TLS
+            server = smtplib.SMTP(
+                EMAIL_CONFIG["SmtpServer"],
+                port,
+                timeout=30
+            )
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
 
         # Login
         server.login(
-            EMAIL_CONFIG.get('Username'),
-            EMAIL_CONFIG.get('Password')
+            EMAIL_CONFIG["Username"],
+            EMAIL_CONFIG["Password"]
         )
 
         # Send email
         server.sendmail(
-            from_addr=EMAIL_CONFIG.get('DefaultFrom'),
+            from_addr=EMAIL_CONFIG["DefaultFrom"],
             to_addrs=[recipient_email],
             msg=msg.as_string()
         )
-
-        server.quit()
 
         logger.info(f"Email sent successfully to {recipient_email}")
 
@@ -105,76 +119,41 @@ def send_email(recipient_email, subject, body, is_html=False):
         }
 
     except smtplib.SMTPAuthenticationError as e:
-        debug_info = (
-            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
-            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
-            f"Username={EMAIL_CONFIG.get('Username')}, "
-            f"Password={mask_password(EMAIL_CONFIG.get('Password'))}"
-        )
-
-        logger.error(f"SMTP Authentication failed | {debug_info} | Error={str(e)}")
-
+        logger.error(f"SMTP Authentication failed | Error={str(e)}")
         return {
             "status": "error",
-            "email_message": (
-                "Email authentication failed. "
-                f"Details: {debug_info}"
-            )
+            "email_message": "Email authentication failed"
         }
 
     except smtplib.SMTPException as e:
-        debug_info = (
-            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
-            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
-            f"Username={EMAIL_CONFIG.get('Username')}"
-        )
-
-        logger.error(f"SMTP error | {debug_info} | Error={str(e)}")
-
+        logger.error(f"SMTP error | Error={str(e)}")
         return {
             "status": "error",
-            "email_message": (
-                f"SMTP error occurred. Details: {debug_info}. Error: {str(e)}"
-            )
+            "email_message": f"SMTP error occurred: {str(e)}"
         }
 
     except Exception as e:
-        debug_info = (
-            f"SMTP Server={EMAIL_CONFIG.get('SmtpServer')}, "
-            f"Port={EMAIL_CONFIG.get('SmtpPort')}, "
-            f"Username={EMAIL_CONFIG.get('Username')}"
-        )
-
-        logger.error(f"Unexpected error | {debug_info} | Error={str(e)}")
-
+        logger.error(f"Unexpected error | Error={str(e)}")
         return {
             "status": "error",
-            "email_message": (
-                f"Unexpected error while sending email. "
-                f"Details: {debug_info}. Error: {str(e)}"
-            )
+            "email_message": f"Unexpected error: {str(e)}"
         }
 
+    finally:
+        if server:
+            try:
+                server.quit()
+            except:
+                pass
 
+
+# -------------------------------------------------------
+# OTP EMAIL
+# -------------------------------------------------------
 def send_otp_email(email, otp, user_name=None):
-    """
-    Send OTP to user's email with formatted HTML template.
-    
-    Args:
-        email (str): User's email address
-        otp (str): 6-digit OTP code
-        user_name (str, optional): User's name for personalization
-        
-    Returns:
-        dict: Status and message
-        
-    Example:
-        result = send_otp_email("user@example.com", "123456", "John Doe")
-    """
-    
+
     subject = "Your EvenPay OTP Code"
-    
-    # Create HTML body
+
     html_body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -198,56 +177,31 @@ def send_otp_email(email, otp, user_name=None):
                 </p>
                 
                 <p style="color: #999; font-size: 12px; margin-top: 10px;">
-                    SplitMoney Team<br>
-                    © 2026 SplitMoney. All rights reserved.
+                    EvenPay Team<br>
+                    © 2026 EvenPay. All rights reserved.
                 </p>
             </div>
         </body>
     </html>
     """
-    
-    # Send email
-    result = send_email(
-        recipient_email=email,
-        subject=subject,
-        body=html_body,
-        is_html=True
-    )
-    
-    return result
+
+    return send_email(email, subject, html_body, True)
 
 
+# -------------------------------------------------------
+# EVENT INVITATION EMAIL
+# -------------------------------------------------------
 def send_event_invitation_email(email, event_name, event_date, event_details=None):
-    """
-    Send event invitation email to participant.
-    
-    Args:
-        email (str): Participant's email address
-        event_name (str): Name of the event
-        event_date (str): Date of the event
-        event_details (str, optional): Additional event details
-        
-    Returns:
-        dict: Status and message
-        
-    Example:
-        result = send_event_invitation_email(
-            email="user@example.com",
-            event_name="Team Dinner",
-            event_date="2025-02-15",
-            event_details="Downtown Restaurant"
-        )
-    """
-    
+
     subject = f"You're invited to {event_name}"
-    
+
     html_body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="color: #333;">Event Invitation</h2>
                 
-                <p style="color: #666;">You've been invited to an event on SplitMoney!</p>
+                <p style="color: #666;">You've been invited to an event on EvenPay!</p>
                 
                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #007bff; margin: 20px 0;">
                     <h3 style="color: #007bff; margin-top: 0;">{event_name}</h3>
@@ -261,53 +215,31 @@ def send_event_invitation_email(email, event_name, event_date, event_details=Non
                 </p>
                 
                 <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    SplitMoney Team<br>
-                    © 2026 SplitMoney. All rights reserved.
+                    EvenPay Team<br>
+                    © 2026 EvenPay. All rights reserved.
                 </p>
             </div>
         </body>
     </html>
     """
-    
-    return send_email(
-        recipient_email=email,
-        subject=subject,
-        body=html_body,
-        is_html=True
-    )
+
+    return send_email(email, subject, html_body, True)
 
 
+# -------------------------------------------------------
+# PAYMENT REMINDER EMAIL
+# -------------------------------------------------------
 def send_payment_reminder_email(email, event_name, amount_due, due_date=None):
-    """
-    Send payment reminder email to participant.
-    
-    Args:
-        email (str): Participant's email address
-        event_name (str): Name of the event
-        amount_due (float): Amount to be paid
-        due_date (str, optional): Payment due date
-        
-    Returns:
-        dict: Status and message
-        
-    Example:
-        result = send_payment_reminder_email(
-            email="user@example.com",
-            event_name="Team Dinner",
-            amount_due=1500.00,
-            due_date="2025-02-20"
-        )
-    """
-    
+
     subject = f"Payment Reminder: {event_name}"
-    
+
     html_body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h2 style="color: #333;">Payment Reminder</h2>
                 
-                <p style="color: #666;">This is a friendly reminder about a pending payment on SplitMoney.</p>
+                <p style="color: #666;">This is a friendly reminder about a pending payment on EvenPay.</p>
                 
                 <div style="background-color: #fff3cd; padding: 20px; border-left: 4px solid #ffc107; margin: 20px 0;">
                     <h3 style="color: #856404; margin-top: 0;">{event_name}</h3>
@@ -322,17 +254,12 @@ def send_payment_reminder_email(email, event_name, amount_due, due_date=None):
                 </p>
                 
                 <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    SplitMoney Team<br>
-                    © 2026 SplitMoney. All rights reserved.
+                    EvenPay Team<br>
+                    © 2026 EvenPay. All rights reserved.
                 </p>
             </div>
         </body>
     </html>
     """
-    
-    return send_email(
-        recipient_email=email,
-        subject=subject,
-        body=html_body,
-        is_html=True
-    )
+
+    return send_email(email, subject, html_body, True)
